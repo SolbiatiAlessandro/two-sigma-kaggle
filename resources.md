@@ -6,3 +6,5 @@ Here are the resources I found and I am reading
 - 2 [Beating Kaggle the Easy way](http://www.ke.tu-darmstadt.de/lehre/arbeiten/studien/2015/Dong_Ying.pdf)
 
 - 3 [Previous competition winner interview on github](https://github.com/ChenglongChen/Kaggle_CrowdFlower/blob/master/BlogPost/BlogPost.md)
+
+Since after couple of days of reading the material looked to confused, I decided to enroll in Coursera [How to win a Data Science Competition - Learn from top kagglers](https://www.coursera.org/learn/competitive-data-science), I will see how to organize the material.
