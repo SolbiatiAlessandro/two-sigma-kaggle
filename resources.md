@@ -8,3 +8,9 @@ Here are the resources I found and I am reading
 - 3 [Previous competition winner interview on github](https://github.com/ChenglongChen/Kaggle_CrowdFlower/blob/master/BlogPost/BlogPost.md)
 
 Since after couple of days of reading the material looked to confused, I decided to enroll in Coursera [How to win a Data Science Competition - Learn from top kagglers](https://www.coursera.org/learn/competitive-data-science), I will see how to organize the material.
+
+Machine Learning Models:
+
+- 1 [Random Forest](https://www.datasciencecentral.com/profiles/blogs/random-forests-explained-intuitively)
+- 2 [Gradient Boosting](http://arogozhnikov.github.io/2016/06/24/gradient_boosting_explained.html)
+- 3 [KNN](https://www.analyticsvidhya.com/blog/2018/03/introduction-k-neighbours-algorithm-clustering/)
