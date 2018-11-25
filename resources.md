@@ -25,3 +25,5 @@ Feature generation
 Text processsing
 - [Introduction to Word Embedding Models with Word2Vec](https://taylorwhitten.github.io/blog/word2vec)
 - [Word2Vec Tutorial](https://rare-technologies.com/word2vec-tutorial/)
+- [Fine-Tuning deep learning models](https://flyyufelix.github.io/2016/10/08/fine-tuning-in-keras-part2.html)
+- [Using pre-trained models](https://keras.io/applications/)
