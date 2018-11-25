@@ -22,3 +22,6 @@ Feature preprocessing
 Feature generation
 - [Discover Feature Engineering, How to Engineer Features and How to Get Good at It](https://machinelearningmastery.com/discover-feature-engineering-how-to-engineer-features-and-how-to-get-good-at-it/)
 - [Discussion of feature engineering on Quora](https://www.quora.com/What-are-some-best-practices-in-Feature-Engineering)
+Text processsing
+- [Introduction to Word Embedding Models with Word2Vec](https://taylorwhitten.github.io/blog/word2vec)
+- [Word2Vec Tutorial](https://rare-technologies.com/word2vec-tutorial/)
