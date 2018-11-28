@@ -27,3 +27,6 @@ Text processsing
 - [Word2Vec Tutorial](https://rare-technologies.com/word2vec-tutorial/)
 - [Fine-Tuning deep learning models](https://flyyufelix.github.io/2016/10/08/fine-tuning-in-keras-part2.html)
 - [Using pre-trained models](https://keras.io/applications/)
+Validation
+- [Avoid LB shuffle](http://www.chioka.in/how-to-select-your-final-models-in-a-kaggle-competitio/)
+- [SKlearn validation page](https://scikit-learn.org/stable/modules/cross_validation.html)
