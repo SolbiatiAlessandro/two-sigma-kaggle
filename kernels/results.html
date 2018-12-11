@@ -23,9 +23,28 @@
 		<td>0.62652</td>
 		<td>NOT early stopping</td>
 	</tr>
+	<tr>
+		<td>3</td>
+		<td>VALIDATION + metric LGB baseline</td>
+		<td>0.682103</td>
+		<td>0.520022</td>
+		<td>0.62567</td>
+		<td>changed some parameters (randomly)</td>
+	</tr>
+	<tr>
+		<td>4</td>
+		<td>VALIDATION + metric LGB baseline</td>
+		<td>0.762885</td>
+		<td>0.412678</td>
+		<td>0.43256</td>
+		<td>deleted mean_asset_return from features</td>
+	</tr>
 </table>
 <br>
 <li>
 	<ul><b>[1]</b>: This kernel is a baseline with lightLGB, the main focus was on train/validation split (using 0.8 separation) and on metric function (compute sortino), the learning rate is pretty weird tough, it spikes up to 0.51 and then it goes down and then learn gradually, not that much. Uses early stopping so the model is picking 0.51. <img src="trainings/1.png"></ul>
 	<ul><b>[2]</b>: Same kernel as [1], differnece that didn't use early stopping. Dosn't sound super good, difference of 0.51 - 0.47 in validation results in a difference of 0.629 - 0.626 in leaderboard. Need to change hyperparameters and check if substantial differnece how is influenced</ul>
+	<ul><b>[3]</b>: Same kernel as [1], changed depthb of tree. improvement of 0.01 in validation doesn't have correlation with leatherboard. Conclusion<b>with the current validation method changes in validation smaller then 0.05 are not relevant</b>: '</ul>
+	<ul><b>[4]</b>: This time I deleted asset related feature like asset_mean_open, that initial spike reduced. Interesting to reflect on this from feature engineerng point of vire. This time change in validation change also on public leadearboard! Great news: <b>Changes bigger then 0.1 in validation set are relevant!! We can use this validation method to do feature engineering</b> As a referebce for later the training for this model (Without asset specific features) is as follows: <img src="trainings/2.png"></ul>
+</li>
 </li>
