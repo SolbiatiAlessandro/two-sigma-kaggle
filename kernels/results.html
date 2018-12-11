@@ -15,8 +15,17 @@
 		<td>0.62900</td>
 		<td>Uses early stopping</td>
 	</tr>
+	<tr>
+		<td>2</td>
+		<td>VALIDATION + metric LGB baseline</td>
+		<td>0.940903</td>
+		<td>0.470101</td>
+		<td>0.62652</td>
+		<td>NOT early stopping</td>
+	</tr>
 </table>
 <br>
 <li>
 	<ul><b>[1]</b>: This kernel is a baseline with lightLGB, the main focus was on train/validation split (using 0.8 separation) and on metric function (compute sortino), the learning rate is pretty weird tough, it spikes up to 0.51 and then it goes down and then learn gradually, not that much. Uses early stopping so the model is picking 0.51. <img src="trainings/1.png"></ul>
+	<ul><b>[2]</b>: Same kernel as [1], differnece that didn't use early stopping. Dosn't sound super good, difference of 0.51 - 0.47 in validation results in a difference of 0.629 - 0.626 in leaderboard. Need to change hyperparameters and check if substantial differnece how is influenced</ul>
 </li>
