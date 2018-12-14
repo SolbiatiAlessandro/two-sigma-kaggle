@@ -10,11 +10,9 @@ Here are the resources I found and I am reading
 Since after couple of days of reading the material looked to confused, I decided to enroll in Coursera [How to win a Data Science Competition - Learn from top kagglers](https://www.coursera.org/learn/competitive-data-science), I will see how to organize the material.
 
 Machine Learning Models:
-
 - 1 [Random Forest](https://www.datasciencecentral.com/profiles/blogs/random-forests-explained-intuitively)
 - 2 [Gradient Boosting](http://arogozhnikov.github.io/2016/06/24/gradient_boosting_explained.html)
 - 3 [KNN](https://www.analyticsvidhya.com/blog/2018/03/introduction-k-neighbours-algorithm-clustering/)
-
 Feature preprocessing
 - [Preprocessing in Sklearn](https://scikit-learn.org/stable/modules/preprocessing.html)
 - [Andrew NG about gradient descent and feature scaling](https://www.coursera.org/learn/machine-learning/lecture/xx3Da/gradient-descent-in-practice-i-feature-scaling)
@@ -30,3 +28,5 @@ Text processsing
 Validation
 - [Avoid LB shuffle](http://www.chioka.in/how-to-select-your-final-models-in-a-kaggle-competitio/)
 - [SKlearn validation page](https://scikit-learn.org/stable/modules/cross_validation.html)
+Hyperparam Tuning
+- [Hyperopt][http://fastml.com/optimizing-hyperparams-with-hyperopt/]
