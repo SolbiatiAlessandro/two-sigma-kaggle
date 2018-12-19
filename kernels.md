@@ -1,5 +1,31 @@
 This are the kernels I am going through with some comments
 
+top 10 by gain
+--
+returnsOpenPrevMktres10 : 25540.090746879578
+assetName_mean_close : 5334.778017044067
+returnsOpenPrevRaw1 : 3812.769549369812
+assetName_mean_open : 2712.5761909484863
+close : 1865.5509052276611
+close_to_open : 1781.2829246520996
+returnsClosePrevMktres1 : 1490.8566799163818
+open : 1401.5982103347778
+returnsOpenPrevMktres1 : 754.6836042404175
+returnsClosePrevRaw1 : 295.4302005767822
+
+top 10 by split
+--
+returnsOpenPrevMktres10 : 52
+assetName_mean_close : 52
+returnsOpenPrevRaw1 : 48
+open : 46
+assetName_mean_open : 39
+close : 34
+returnsOpenPrevMktres1 : 31
+close_to_open : 28
+returnsClosePrevMktres1 : 25
+returnsClosePrevRaw1 : 16
+
 - [1] [Getting Started](https://www.kaggle.com/dster/two-sigma-news-official-getting-started-kernel)
 Introductory kernel that explains how to use APIs
 
