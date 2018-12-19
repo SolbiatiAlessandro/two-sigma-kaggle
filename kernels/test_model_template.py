@@ -1,42 +1,66 @@
 import unittest
 import model_template
+import pandas as pd
 
 
 class testcase(unittest.TestCase):
 
     def setUp(self):
-        import pandas as pd
-
-        market_train_df_cols = ['time', 'assetCode', 'assetName', 'volume', 'close', 'open',
-       'returnsClosePrevRaw1', 'returnsOpenPrevRaw1',
-       'returnsClosePrevMktres1', 'returnsOpenPrevMktres1',
-       'returnsClosePrevRaw10', 'returnsOpenPrevRaw10',
-       'returnsClosePrevMktres10', 'returnsOpenPrevMktres10',
-       'returnsOpenNextMktres10', 'universe']
-        news_train_df_cols = ['time', 'sourceTimestamp', 'firstCreated', 'sourceId', 'headline',
-       'urgency', 'takeSequence', 'provider', 'subjects', 'audiences',
-       'bodySize', 'companyCount', 'headlineTag', 'marketCommentary',
-       'sentenceCount', 'wordCount', 'assetCodes', 'assetName',
-       'firstMentionSentence', 'relevance', 'sentimentClass',
-       'sentimentNegative', 'sentimentNeutral', 'sentimentPositive',
-       'sentimentWordCount', 'noveltyCount12H', 'noveltyCount24H',
-       'noveltyCount3D', 'noveltyCount5D', 'noveltyCount7D', 'volumeCounts12H',
-       'volumeCounts24H', 'volumeCounts3D', 'volumeCounts5D',
-       'volumeCounts7D']
-
-        self.X = pd.DataFrame(columns=market_train_df_cols), pd.DataFrame(columns=news_train_df_cols)
-        self.Y = pd.Series([3,5,8])
+        self.market_train_df = pd.read_csv("data/market_train_df_head.csv").drop('Unnamed: 0', axis=1)
+        self.news_train_df = pd.read_csv("data/news_train_df_head.csv").drop('Unnamed: 0', axis=1)
+        self.target = self.market_train_df['returnsOpenNextMktres10']
+        self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
+        
+        self.market_cols = list(self.market_train_df.columns)
+        self.news_cols = list(self.news_train_df.columns)
 
     def test_generate_features(self):
         m = model_template.model_example('example')
-        m._generate_features(self.X)
-        #assert on new generated features
+        complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
+
+        # _generate_features must not change the given dataset in place
+        self.assertListEqual(list(self.market_train_df.columns), self.market_cols)
+        self.assertListEqual(list(self.news_train_df.columns), self.news_cols)
+
+        # assert here on newly generated features
+        self.assertFalse(complete_features.empty)
+        self.assertTrue('open+close' in complete_features.columns)
 
     def test_train(self):
         m = model_template.model_example('example')
         self.assertTrue(m.model is None)
-        m.train(self.X, self.Y)
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         self.assertEqual(type(m.model), m.type)
+
+    def test_predict(self):
+        X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
+        y_test = self.target[-20:]
+        
+        m = model_template.model_example('example')
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
+
+        got = m.predict(X_test, verbose=True)
+
+        #sanity check on prediction sizes
+        self.assertTrue(len(got) > 0)
+        self.assertEqual(X_test[0].shape[0], len(got))
+        self.assertEqual(len(y_test), len(got))
+
+    def test_predict_rolling(self):
+        historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
+        y_test = self.target[-20:]
+        
+        m = model_template.model_example('example')
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
+
+        got = m.predict_rolling(historical_df, len(y_test), verbose=True)
+
+        #sanity check on prediction sizes
+        self.assertTrue(len(got) > 0)
+        self.assertEqual(len(y_test), len(got))
+
+        #TODO: add lagged features and test on those features
+
 
 if __name__=="__main__":
     unittest.main()
