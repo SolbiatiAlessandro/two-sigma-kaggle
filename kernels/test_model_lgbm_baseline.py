@@ -1,5 +1,5 @@
 import unittest
-import model_template
+import model_lgbm_baseline
 import pandas as pd
 
 
@@ -8,14 +8,18 @@ class testcase(unittest.TestCase):
     def setUp(self):
         self.market_train_df = pd.read_csv("data/market_train_df_head.csv").drop('Unnamed: 0', axis=1)
         self.news_train_df = pd.read_csv("data/news_train_df_head.csv").drop('Unnamed: 0', axis=1)
-        self.target = self.market_train_df['returnsOpenNextMktres10']
-        self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
         
         self.market_cols = list(self.market_train_df.columns)
         self.news_cols = list(self.news_train_df.columns)
 
+        #augmenting data to make a bit more realistic for lgb
+        self.market_train_df = pd.concat([self.market_train_df for _ in range(10)])
+        self.news_train_df = pd.concat([self.news_train_df for _ in range(10)])
+        self.target = self.market_train_df['returnsOpenNextMktres10']
+        self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
+
     def test_generate_features(self):
-        m = model_template.model_example('example')
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
         complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
 
         # _generate_features must not change the given dataset in place
@@ -24,21 +28,22 @@ class testcase(unittest.TestCase):
 
         # assert here on newly generated features
         self.assertFalse(complete_features.empty)
-        self.assertTrue('open+close' in complete_features.columns)
+        self.assertTrue('weekday' in complete_features.columns)
         print("generate features test OK")
 
     def test_train(self):
-        m = model_template.model_example('example')
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
         self.assertTrue(m.model is None)
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         self.assertEqual(type(m.model), m.type)
         print("train test OK")
 
+    #@unittest.skip("for later")
     def test_predict(self):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
         
-        m = model_template.model_example('example')
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict(X_test, verbose=True)
@@ -49,11 +54,12 @@ class testcase(unittest.TestCase):
         self.assertEqual(len(y_test), len(got))
         print("predictions test OK")
 
+    #@unittest.skip("for later")
     def test_predict_rolling(self):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
         
-        m = model_template.model_example('example')
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict_rolling(historical_df, len(y_test), verbose=True)
@@ -63,6 +69,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(len(y_test), len(got))
         print("rolling predictions test OK")
 
+    #@unittest.skip("for later")
     def test_lagged_features(self):
         """simulate historical_df pattern to check 
         historical features work properly"""
@@ -73,20 +80,17 @@ class testcase(unittest.TestCase):
         historical_df  = [self.market_train_df.iloc[-historical_len:], self.news_train_df[-historical_len:]]
         y_test = self.target[-prediction_len:]
 
-        m = model_template.model_example('example')
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
         processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
         X_test = processed_historical_df.iloc[-prediction_len:]
 
-        # the feature engineering process should have generated
-        # a column called df['lag_10_open_max'] that is a lagged
-        # max value of last 10 time points of open column
-        # import pdb;pdb.set_trace() 
         X_test.reset_index(inplace=True)
 
-        value_in_test = X_test.loc[0, 'lag_10_open_max']
-        real_lagged_value = processed_historical_df[(-prediction_len - 10):(-prediction_len + 1)]['open'].max() 
+        #import pdb;pdb.set_trace()
+        value_in_test = X_test.loc[0, 'lag_7_returnsClosePrevRaw10_max']
+        real_lagged_value = processed_historical_df[(-prediction_len - 6):(-prediction_len + 1)]['returnsClosePrevRaw10'].max() 
         self.assertEqual(value_in_test, real_lagged_value)
-        self.assertEqual(m.max_lag, 10)train
+        self.assertEqual(m.max_lag, 200)
         print("lagged feature test OK")
 
 
