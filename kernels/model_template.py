@@ -37,6 +37,7 @@ class model_example():
 
         complete_features = market_data.copy()
         complete_features['open+close'] = complete_features['open'] + complete_features['close']
+        complete_features['lag_10_open_max'] = complete_features['open'].rolling(10, min_periods=1).max()
         complete_features.drop(['time','assetCode','assetName'],axis=1,inplace=True)
         complete_features.fillna(0, inplace=True)
 
@@ -108,4 +109,3 @@ class model_example():
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
-
