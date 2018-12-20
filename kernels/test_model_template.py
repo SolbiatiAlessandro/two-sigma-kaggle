@@ -86,6 +86,7 @@ class testcase(unittest.TestCase):
         value_in_test = X_test.loc[0, 'lag_10_open_max']
         real_lagged_value = processed_historical_df[(-prediction_len - 10):(-prediction_len + 1)]['open'].max() 
         self.assertEqual(value_in_test, real_lagged_value)
+        self.assertEqual(m.max_lag, 10)
         print("lagged feature test OK")
 
 

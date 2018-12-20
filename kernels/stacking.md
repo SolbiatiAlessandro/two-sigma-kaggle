@@ -1,5 +1,11 @@
-I wrote a working script implementing the whole stacking pipeline. Need to write docs
+DOCS
 
-NOTE: when I preprocess data in prediction time the new fetaures are completely rubbish (asset_mean)
-1) think about how to fix
-2) CHECK if in kernel coming from is also like that
+Guidelines [follow carefully]
+==========
+
+ - every model to be used must satisfy the APIs requirements of model_template.py, and must pass all the tests like test_model_template.py
+
+- data preprocessing is done at the beggining over the whole tranining dataset, and it MUST not add new features. New features must be added only during the _generate_features method.
+
+- you can see a complete example on how to fit a single model in the kernel SINGLE MODEL SUBMISSION (TEMPLATE)
+
