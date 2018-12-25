@@ -2,14 +2,12 @@
 This is a template for the APIs of models to be used into the stacking framework.
 run with Python 3.x
 """
-try:
-    from time import time, ctime
-    import lightgbm as lgb
-    import pandas as pd
-    from matplotlib import pyplot as plt
-    from datetime import datetime
-except:
-    exit("ImportError: requirements -lightgbm, -pandas, -matplotlib")
+from time import time, ctime
+import lightgbm as lgb
+import pandas as pd
+from matplotlib import pyplot as plt
+from datetime import datetime
+import shap
 
 
 def sigma_score(preds, valid_data):
@@ -73,6 +71,9 @@ class model_lgbm_baseline():
 
         complete_features = market_data.copy()
         
+        if 'returnsOpenNextMktres10' in complete_features.columns:
+            complete_features.drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
+
         # [36] short-term lagged features on returns
         for feature in ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10']:
             for lag in [3,7,14]:
@@ -126,8 +127,6 @@ class model_lgbm_baseline():
         start_time = time()
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
 
-        if 'returnsOpenNextMktres10' in X[0].columns:
-            X[0].drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
             
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
 
@@ -175,7 +174,7 @@ class model_lgbm_baseline():
             'boosting_type': 'gbdt',
             'objective': 'binary',
             # 'objective': 'regression',
-            'learning_rate': x_1[0],
+            '_earning_rate': x_1[0],
             'num_leaves': x_1[1],
             'min_data_in_leaf': x_1[2],
             # 'num_iteration': x_1[3],
@@ -205,12 +204,13 @@ class model_lgbm_baseline():
         return training_results 
 
 
-    def predict(self, X, verbose=False):
+    def predict(self, X, verbose=False, do_shap=False):
         """
         given a block of X features gives prediction for everyrow
 
         Args:
             X: [market_train_df, news_train_df]
+            shap: perform shap analysis
         Returns:
             y: pandas.Series
         """
@@ -222,6 +222,14 @@ class model_lgbm_baseline():
         X_test = self._generate_features(X[0], X[1], verbose=verbose)
         if verbose: print("X_test shape {}".format(X_test.shape))
         y_test = self.model.predict(X_test)
+
+        if do_shap:
+            #import pdb;pdb.set_trace()
+            print("printing shap analysis..")
+            explainer = shap.TreeExplainer(self.model)
+            shap_values = explainer.shap_values(X_test)
+            shap.summary_plot(shap_values, X_test)
+
 
         if verbose: print("Finished prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
@@ -247,9 +255,11 @@ class model_lgbm_baseline():
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
 
-    def inspect(self):
+    def inspect(self, X):
         """
         visualize and examine the training of the model
+        Args:
+            X: for the shap values
 
         MODEL SPECIFIC:
         plots training results and feature importance
@@ -272,7 +282,5 @@ class model_lgbm_baseline():
             f=lgb.plot_importance(self.model)
             f.figure.set_size_inches(10, 30) 
             plt.show()
-            pass
-
 
 

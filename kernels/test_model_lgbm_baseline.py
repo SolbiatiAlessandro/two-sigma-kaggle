@@ -55,6 +55,18 @@ class testcase(unittest.TestCase):
         print("predictions test OK")
 
     #@unittest.skip("for later")
+    def test_shap(self):
+        X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
+        y_test = self.target[-20:]
+        
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
+
+        m.predict(X_test, verbose=True, do_shap=True)
+
+        print("shap OK")
+
+    #@unittest.skip("for later")
     def test_predict_rolling(self):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
@@ -70,7 +82,7 @@ class testcase(unittest.TestCase):
         print("rolling predictions test OK")
 
     #@unittest.skip("for later")
-    def test_lagged_features(self):
+    def test_lagged_eatures(self):
         """simulate historical_df pattern to check 
         historical features work properly"""
 
@@ -97,9 +109,9 @@ class testcase(unittest.TestCase):
     def test_inspect(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
-        m.inspect()
+        m.inspect(self.market_train_df)
 
-    #@unittest.skip("this is computationally heavy")
+    @unittest.skip("this is computationally heavy")
     def test_train_with_fulldataset(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         self.assertTrue(m.model is None)
@@ -117,7 +129,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(type(m.model), m.type)
         print("train test OK")
 
-        m.inspect() #looks healthy
+        m.inspect(self.market_train_df) #looks healthy
 
 
 if __name__=="__main__":
