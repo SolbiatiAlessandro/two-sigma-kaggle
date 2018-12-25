@@ -138,9 +138,11 @@ class model_lgbm_baseline():
         test_train_distsance = 0
         X_train, X_val = X[:split - test_train_distsance], X[split:]
         Y_train, Y_val = Y[:split - test_train_distsance], Y[split:]
-        
+
         if verbose: print("X_train shape {}".format(X_train.shape))
-        if verbose: print("X_val shape {}".format(X_train.shape))
+        if verbose: print("X_val shape {}".format(X_val.shape))
+        assert X_train.shape[0] != X_val.shape[0]
+        assert X_train.shape[1] == X_val.shape[1]
 
         # universe filtering on validation set
         universe_filter = X['universe'][split:] == 1.0

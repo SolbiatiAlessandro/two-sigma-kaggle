@@ -93,13 +93,13 @@ class testcase(unittest.TestCase):
         self.assertEqual(m.max_lag, 200)
         print("lagged feature test OK")
 
-    #@unittest.skip("do not print")
+    @unittest.skip("do not print")
     def test_inspect(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         m.inspect()
 
-    @unittest.skip("this is computationally heavy")
+    #@unittest.skip("this is computationally heavy")
     def test_train_with_fulldataset(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         self.assertTrue(m.model is None)
