@@ -93,6 +93,14 @@ class testcase(unittest.TestCase):
         self.assertEqual(m.max_lag, 200)
         print("lagged feature test OK")
 
+    #@unittest.skip('w')
+    def test_inspect(self):
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
+
+        m.inspect()
+
+
 
 if __name__=="__main__":
     unittest.main()

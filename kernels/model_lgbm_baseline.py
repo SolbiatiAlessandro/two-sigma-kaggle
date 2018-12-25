@@ -36,9 +36,10 @@ class model_lgbm_baseline():
     """
 
     def __init__(self, name):
-        self.name  = name
-        self.model = None
-        self.type  = lgb.Booster
+        self.name             = name
+        self.model            = None
+        self.type             = lgb.Booster
+        self.training_results = None
         print("\ninit model {}".format(self.name))
 
     def _generate_features(self, market_data, news_data, verbose=False):
@@ -169,7 +170,6 @@ class model_lgbm_baseline():
         }
         
         # start training
-        training_results = {}
         self.model = lgb.train(
                 params_1, 
                 lgb_train,
@@ -179,11 +179,11 @@ class model_lgbm_baseline():
                 verbose_eval=25,
                 early_stopping_rounds=100,
                 #feval=sigma_score,
-                evals_result=training_results)
+                evals_result=self.training_results)
         del X, X_train, X_val
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
-        return training_results
+        return self.training_results
 
 
     def predict(self, X, verbose=False):
@@ -227,3 +227,25 @@ class model_lgbm_baseline():
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
+
+    def inspect(self):
+        """
+        visualize and examine the training of the model
+
+        MODEL SPECIFIC:
+        plots training results and feature importance
+        """
+        if not self.training_results:
+            print("Error: No training results available")
+        else:
+            #plt.training_results[][]
+            pass
+
+        if not self.model:
+            print("Error: No model available")
+        else:
+            f=lgb.plot_importance(self.model)
+            f.figure.set_size_inches(10, 30) 
+
+
+
