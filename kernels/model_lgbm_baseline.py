@@ -131,6 +131,7 @@ class model_lgbm_baseline():
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
 
         X = self._generate_features(X[0], X[1], verbose=verbose)
+        Y = Y.clip(Y.quantile(0.001), Y.quantile(0.999))
 
         # split X in X_train and Y_val
         split = int(len(X) * 0.8)
@@ -172,7 +173,7 @@ class model_lgbm_baseline():
             # from script 67
             'task': 'train',
             'boosting_type': 'gbdt',
-            'objective': 'binary',
+            'objective': 'regression_l1',
             # 'objective': 'regression',
             '_earning_rate': x_1[0],
             'num_leaves': x_1[1],
@@ -180,6 +181,8 @@ class model_lgbm_baseline():
             # 'num_iteration': x_1[3],
             'num_iteration': 239,
             'max_bin': x_1[4],
+            'lambda_l1': 0.0,
+            'lambda_l2' : 1.0,
             'verbose': 1
         }
 
@@ -192,8 +195,8 @@ class model_lgbm_baseline():
                 num_boost_round=1000,
                 valid_sets=(lgb_val,lgb_train),
                 valid_names=('valid','train'),
-                verbose_eval=25,
-                early_stopping_rounds=100,
+                verbose_eval=1,
+                early_stopping_rounds=15,
                 #feval=sigma_score,
                 evals_result=training_results)
         del X, X_train, X_val

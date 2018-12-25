@@ -12,10 +12,10 @@ Guidelines [follow carefully]
 ISSUES
 ======
 
-[SOLVED] After writing SUBMISSION LGBM TEMPLATE and run it has some bug but I cant really find what is wrong. I tried to drop additional feature but the model look bugged even without those. I need to take this as an opportunity for a detail debug process of the whole model. [Solution: target was leaking in training dataset]
+[SOLVED] After writing SUBMISSION LGBM TEMPLATE and run it has some bug but I cant really find what is wrong. I tried to drop additional feature but the model look bugged even without those. I need to take this as an opportunity for a detail debug process of the whole model. [SOLUTION: the model was trained with objective function as binary and so was predicting in the range [0, 1] and not regression]
 
 DEV
 ===
 
-- add SHAP for feature importance
+- add SHAP for feature importance: OK
 - have a look at hyperopt

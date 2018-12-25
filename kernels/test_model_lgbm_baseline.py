@@ -54,7 +54,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(len(y_test), len(got))
         print("predictions test OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_shap(self):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
@@ -111,7 +111,7 @@ class testcase(unittest.TestCase):
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         m.inspect(self.market_train_df)
 
-    @unittest.skip("this is computationally heavy")
+    #@unittest.skip("this is computationally heavy")
     def test_train_with_fulldataset(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         self.assertTrue(m.model is None)
@@ -130,6 +130,10 @@ class testcase(unittest.TestCase):
         print("train test OK")
 
         m.inspect(self.market_train_df) #looks healthy
+
+        got = m.predict([self.market_train_df[-100:], None], verbose=True, do_shap=True)
+
+        print(got.describe())
 
 
 if __name__=="__main__":
