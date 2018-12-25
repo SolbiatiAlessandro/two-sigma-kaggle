@@ -35,3 +35,9 @@ Validation
 
 Hyperparam Tuning
 - [Hyperopt][http://fastml.com/optimizing-hyperparams-with-hyperopt/]
+
+Past solutions
+- http://ndres.me/kaggle-past-solutions/
+- https://www.kaggle.com/wiki/PastSolutions
+- http://www.chioka.in/kaggle-competition-solutions/
+- https://github.com/ShuaiW/kaggle-classification/
