@@ -12,4 +12,10 @@ Guidelines [follow carefully]
 ISSUES
 ======
 
-After writing SUBMISSION LGBM TEMPLATE and run it has some bug but I cant really find what is wrong. I tried to drop additional feature but the model look bugged even without those. I need to take this as an opportunity for a detail debug process of the whole model.
+[SOLVED] After writing SUBMISSION LGBM TEMPLATE and run it has some bug but I cant really find what is wrong. I tried to drop additional feature but the model look bugged even without those. I need to take this as an opportunity for a detail debug process of the whole model. [Solution: target was leaking in training dataset]
+
+DEV
+===
+
+- add SHAP for feature importance
+- have a look at hyperopt

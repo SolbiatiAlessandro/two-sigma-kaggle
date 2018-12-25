@@ -2,10 +2,14 @@
 This is a template for the APIs of models to be used into the stacking framework.
 run with Python 3.x
 """
-from time import time, ctime
-import lightgbm as lgb
-import pandas as pd
-from datetime import datetime
+try:
+    from time import time, ctime
+    import lightgbm as lgb
+    import pandas as pd
+    from matplotlib import pyplot as plt
+    from datetime import datetime
+except:
+    exit("ImportError: requirements -lightgbm, -pandas, -matplotlib")
 
 
 def sigma_score(preds, valid_data):
@@ -121,10 +125,13 @@ class model_lgbm_baseline():
         """
         start_time = time()
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
+
+        if 'returnsOpenNextMktres10' in X[0].columns:
+            X[0].drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
             
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
 
-        X = self._generate_features(X[0], X[1])
+        X = self._generate_features(X[0], X[1], verbose=verbose)
 
         # split X in X_train and Y_val
         split = int(len(X) * 0.8)
@@ -134,7 +141,7 @@ class model_lgbm_baseline():
         
         if verbose: print("X_train shape {}".format(X_train.shape))
         if verbose: print("X_val shape {}".format(X_train.shape))
-        
+
         # universe filtering on validation set
         universe_filter = X['universe'][split:] == 1.0
         X_val = X_val[universe_filter]
@@ -148,6 +155,7 @@ class model_lgbm_baseline():
         
         # train parameters prearation
         train_cols = X.columns.tolist()
+        assert 'returnsOpenNextMktres10' not in train_cols 
         lgb_train = lgb.Dataset(X_train.values, Y_train, feature_name=train_cols, free_raw_data=False)
         lgb_val = lgb.Dataset(X_val.values, Y_val, feature_name=train_cols, free_raw_data=False)
 
@@ -164,16 +172,18 @@ class model_lgbm_baseline():
             'task': 'train',
             'boosting_type': 'gbdt',
             'objective': 'binary',
-    #         'objective': 'regression',
+            # 'objective': 'regression',
             'learning_rate': x_1[0],
             'num_leaves': x_1[1],
             'min_data_in_leaf': x_1[2],
-    #         'num_iteration': x_1[3],
+            # 'num_iteration': x_1[3],
             'num_iteration': 239,
             'max_bin': x_1[4],
             'verbose': 1
         }
+
         
+        training_results = {}
         # start training
         self.model = lgb.train(
                 params_1, 
@@ -184,11 +194,13 @@ class model_lgbm_baseline():
                 verbose_eval=25,
                 early_stopping_rounds=100,
                 #feval=sigma_score,
-                evals_result=self.training_results)
+                evals_result=training_results)
         del X, X_train, X_val
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
-        return self.training_results
+
+        self.training_results = training_results
+        return training_results 
 
 
     def predict(self, X, verbose=False):
@@ -205,7 +217,7 @@ class model_lgbm_baseline():
         if self.model is None:
             raise "Error: model is not trained!"
 
-        X_test = self._generate_features(X[0], X[1])
+        X_test = self._generate_features(X[0], X[1], verbose=verbose)
         if verbose: print("X_test shape {}".format(X_test.shape))
         y_test = self.model.predict(X_test)
 
@@ -225,7 +237,7 @@ class model_lgbm_baseline():
         start_time = time()
         if verbose: print("Starting rolled prediction for model {}, {}".format(self.name, ctime()))
 
-        processed_historical_df = self._generate_features(historical_df[0], historical_df[1])
+        processed_historical_df = self._generate_features(historical_df[0], historical_df[1], verbose=verbose)
         X_test = processed_historical_df.iloc[-prediction_length:]
         if verbose: print("X_test shape {}".format(X_test.shape))
         y_test = self.model.predict(X_test)
@@ -244,15 +256,20 @@ class model_lgbm_baseline():
             print("Error: No training results available")
         else:
             print("printing training results..")
-            #plt.training_results[][]
-            pass
+            for _label, key in self.training_results.items():
+                for label, result in key.items():
+                    plt.plot(result,label=_label+" "+label)
+            plt.title("Training results")
+            plt.legend()
+            plt.show()
 
         if not self.model:
             print("Error: No model available")
         else:
             print("printing feature importance..")
-            #f=lgb.plot_importance(self.model)
-            #f.figure.set_size_inches(10, 30) 
+            f=lgb.plot_importance(self.model)
+            f.figure.set_size_inches(10, 30) 
+            plt.show()
             pass
 
 

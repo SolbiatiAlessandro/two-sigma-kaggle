@@ -93,13 +93,31 @@ class testcase(unittest.TestCase):
         self.assertEqual(m.max_lag, 200)
         print("lagged feature test OK")
 
-    #@unittest.skip('w')
+    #@unittest.skip("do not print")
     def test_inspect(self):
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
-
         m.inspect()
 
+    @unittest.skip("this is computationally heavy")
+    def test_train_with_fulldataset(self):
+        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        self.assertTrue(m.model is None)
+
+        print("loading full dataset ..")
+        self.market_train_df = pd.read_csv("data/market_train_df.csv").drop('Unnamed: 0', axis=1)
+        self.news_train_df = None
+        
+        self.market_cols = list(self.market_train_df.columns)
+
+        self.target = self.market_train_df['returnsOpenNextMktres10']
+        self.market_train_df.drop('returnsOpenNextMktres10',axis=1)
+
+        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
+        self.assertEqual(type(m.model), m.type)
+        print("train test OK")
+
+        m.inspect() #looks healthy
 
 
 if __name__=="__main__":
