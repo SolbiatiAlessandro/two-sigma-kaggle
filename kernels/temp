@@ -6,6 +6,7 @@ from time import time, ctime
 import lightgbm as lgb
 import pandas as pd
 from datetime import datetime
+from matplotlib import pyplot as plt
 
 
 def sigma_score(preds, valid_data):
@@ -14,11 +15,11 @@ def sigma_score(preds, valid_data):
     """
     df_time = valid_data.params['extra_time'] # will be injected afterwards
     labels = valid_data.get_label()
-    
+
     #    assert len(labels) == len(df_time)
 
     x_t = preds * labels #  * df_valid['universe'] -> Here we take out the 'universe' term because we already keep only those equals to 1.
-    
+
     # Here we take advantage of the fact that `labels` (used to calculate `x_t`)
     # is a pd.Series and call `group_by`
     x_t_sum = x_t.groupby(df_time).sum()
@@ -36,9 +37,9 @@ class model_lgbm_baseline():
     """
 
     def __init__(self, name):
-        self.name             = name
-        self.model            = None
-        self.type             = lgb.Booster
+        self.name  = name
+        self.model = None
+        self.type  = lgb.Booster
         self.training_results = None
         print("\ninit model {}".format(self.name))
 
@@ -49,12 +50,12 @@ class model_lgbm_baseline():
         generate new features, doesn't change original data.
         NOTE: data cleaning and preprocessing is not here,
         here is only feats engineering
-        
+
         MODEL SPECIFIC:
         as as a baseline for decision trees model we add
         features that are the most popular among public
         kernels on Kaggle:
-        
+
         - [36] short-term lagged features on returns
         - [6]  long-term moving averages
         - [1]  day of the week
@@ -68,21 +69,21 @@ class model_lgbm_baseline():
         if verbose: print("Starting features generation for model {}, {}".format(self.name, ctime()))
 
         complete_features = market_data.copy()
-        
+
         # [36] short-term lagged features on returns
         for feature in ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10']:
             for lag in [3,7,14]:
                 complete_features['lag_{}_{}_max'.format(lag, feature)]  = complete_features[feature].rolling(lag, min_periods=1).max()
                 complete_features['lag_{}_{}_min'.format(lag, feature)]  = complete_features[feature].rolling(lag, min_periods=1).min()
                 complete_features['lag_{}_{}_mean'.format(lag, feature)] = complete_features[feature].rolling(lag, min_periods=1).mean()
-        
+
         # [6]  long-term moving averages
         for feature in ['open','close']:
             for lag in [50, 100, 200]:
                 complete_features['lag_{}_{}_mean'.format(lag, feature)]  = complete_features[feature].rolling(lag, min_periods=1).mean()
 
         self.max_lag = 200
-                
+
         # [1]  day of the week
         #if type(complete_features['time'][0]) == pd._libs.tslibs.timestamps.Timestamp:
         try:    # this is Kaggle environment
@@ -90,8 +91,7 @@ class model_lgbm_baseline():
         except: # in test environment 'time' got to converted to str so need formatting
             complete_features['weekday'] = complete_features['time'].apply(lambda x: datetime.strptime(x.split()[0], "%Y-%M-%d").weekday())
 
-            
-                
+
         complete_features.drop(['time','assetCode','assetName'],axis=1,inplace=True)
         complete_features.fillna(0, inplace=True) # TODO: for next models control this fillna with EDA
 
@@ -103,15 +103,15 @@ class model_lgbm_baseline():
         GENERAL:
         basic method to train a model with given data
         model will be inside self.model after training
-        
+
         MODEL SPECIFIC:
-        
+
         - split 0.8 train validation
         - universe filter on validation
-        - custom metric used (sigma_scored) , 
+        - custom metric used (sigma_scored) ,
             need to put 'metric':'None' in parameters
         - one single lgbm with params_1 from script 67
-        
+
         Args:
             X: [market_train_df, news_train_df]
             Y: [target]
@@ -121,31 +121,31 @@ class model_lgbm_baseline():
         """
         start_time = time()
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
-            
+
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
 
-        X = self._generate_features(X[0], X[1])
+        X = self._generate_features(X[0], X[1], verbose=True)
 
         # split X in X_train and Y_val
         split = int(len(X) * 0.8)
         test_train_distsance = 0
         X_train, X_val = X[:split - test_train_distsance], X[split:]
         Y_train, Y_val = Y[:split - test_train_distsance], Y[split:]
-        
+
         if verbose: print("X_train shape {}".format(X_train.shape))
         if verbose: print("X_val shape {}".format(X_train.shape))
-        
+
         # universe filtering on validation set
         universe_filter = X['universe'][split:] == 1.0
         X_val = X_val[universe_filter]
         Y_val = Y_val[universe_filter]
-        
+
         # this is a time_val series used to calc the sigma_score later, applied split and universe filter
         time_val = time_reference[split:][universe_filter]
-        assert len(time_val) == len(X_val) 
+        assert len(time_val) == len(X_val)
         time_train = time_reference[:split - test_train_distsance]
         assert len(time_train) == len(X_train)
-        
+
         # train parameters prearation
         train_cols = X.columns.tolist()
         lgb_train = lgb.Dataset(X_train.values, Y_train, feature_name=train_cols, free_raw_data=False)
@@ -157,7 +157,7 @@ class model_lgbm_baseline():
         lgb_val.params = {
             'extra_time' : time_val.factorize()[0]
         }
-        
+
         x_1 = [0.19000424246380565, 2452, 212, 328, 202]
         params_1 = {
             # from script 67
@@ -173,22 +173,23 @@ class model_lgbm_baseline():
             'max_bin': x_1[4],
             'verbose': 1
         }
-        
+
         # start training
+        training_results = {}
         self.model = lgb.train(
-                params_1, 
+                params_1,
                 lgb_train,
                 num_boost_round=1000,
                 valid_sets=(lgb_val,lgb_train),
                 valid_names=('valid','train'),
                 verbose_eval=25,
-                early_stopping_rounds=100,
+                early_stopping_rounds=10,
                 #feval=sigma_score,
-                evals_result=self.training_results)
+                evals_result=training_results)
         del X, X_train, X_val
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
-        return self.training_results
+        return training_results
 
 
     def predict(self, X, verbose=False):
@@ -232,7 +233,7 @@ class model_lgbm_baseline():
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
-
+    
     def inspect(self):
         """
         visualize and examine the training of the model
@@ -243,17 +244,11 @@ class model_lgbm_baseline():
         if not self.training_results:
             print("Error: No training results available")
         else:
-            print("printing training results..")
             #plt.training_results[][]
             pass
 
         if not self.model:
             print("Error: No model available")
         else:
-            print("printing feature importance..")
-            #f=lgb.plot_importance(self.model)
-            #f.figure.set_size_inches(10, 30) 
-            pass
-
-
-
+            f=lgb.plot_importance(self.model)
+            f.figure.set_size_inches(10, 30)
