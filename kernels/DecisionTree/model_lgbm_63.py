@@ -136,8 +136,10 @@ class model_lgbm():
             return new_df
 
         n_lag = [3,7,14]
+        self.max_lag = 14
         new_df = generate_lag_features(complete_features,n_lag)
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
+
 
 
         # [3] asset features

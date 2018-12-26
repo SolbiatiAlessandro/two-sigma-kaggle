@@ -77,10 +77,15 @@ class model_lgbm_baseline():
         # [36] short-term lagged features on returns
         for feature in ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10']:
             for lag in [3,7,14]:
-                complete_features['lag_{}_{}_max'.format(lag, feature)]  = complete_features[feature].rolling(lag, min_periods=1).max()
-                complete_features['lag_{}_{}_min'.format(lag, feature)]  = complete_features[feature].rolling(lag, min_periods=1).min()
-                complete_features['lag_{}_{}_mean'.format(lag, feature)] = complete_features[feature].rolling(lag, min_periods=1).mean()
-        
+                #import pdb;pdb.set_trace()
+                assetGroups = complete_features.groupby(['assetCode'])
+
+                complete_features['lag_{}_{}_max'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).max().reset_index().set_index('level_1').iloc[:, 1].sort_index()
+
+                complete_features['lag_{}_{}_min'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).min().reset_index().set_index('level_1').iloc[:, 1].sort_index()
+
+                complete_features['lag_{}_{}_mean'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).mean().reset_index().set_index('level_1').iloc[:, 1].sort_index()
+
         # [6]  long-term moving averages
         for feature in ['open','close']:
             for lag in [50, 100, 200]:

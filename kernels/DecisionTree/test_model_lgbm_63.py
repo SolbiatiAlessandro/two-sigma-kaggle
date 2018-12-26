@@ -1,6 +1,7 @@
 import unittest
 import model_lgbm_63
 import pandas as pd
+import numpy as np
 
 
 class testcase(unittest.TestCase):
@@ -15,6 +16,7 @@ class testcase(unittest.TestCase):
         self.target = self.market_train_df['returnsOpenNextMktres10']
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
+    @unittest.skip("wait")
     def test_generate_features(self):
         m = model_lgbm_63.model_lgbm('example')
         complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
@@ -42,7 +44,7 @@ class testcase(unittest.TestCase):
         print(complete_features.columns)
         print("generate features test OK")
 
-    #@unittest.skip("wait")
+    @unittest.skip("wait")
     def test_train(self):
         m = model_lgbm_63.model_lgbm('example')
         self.assertTrue(m.model is None)
@@ -93,28 +95,35 @@ class testcase(unittest.TestCase):
         self.assertEqual(len(y_test), len(got))
         print("rolling predictions test OK")
 
-    @unittest.skip("for later")
+    #@unittest.skip("for later")
     def test_lagged_eatures(self):
         """simulate historical_df pattern to check 
         historical features work properly"""
 
-        historical_len = 40
-        prediction_len = 20
+        self.market_train_df = pd.read_csv("../data/market_train_df.csv").drop('Unnamed: 0', axis=1)
 
-        historical_df  = [self.market_train_df.iloc[-historical_len:], self.news_train_df[-historical_len:]]
-        y_test = self.target[-prediction_len:]
+        #in days
+        historical_len = 40
+        prediction_len = 1
+
+        # this add the column period to the dataframe
+        times = self.market_train_df.time.unique()
+        periods_number = len(times)
+        self.market_train_df['period'] = self.market_train_df['time'].apply(lambda s: np.where(times == s)[0][0])
+
+        import pdb;pdb.set_trace()
+        historical_df  = self.market_train_df[self.market_train_df['period'] <= periods_number - historical_len], None
+        y_test = historical_df[0]['returnsOpenNextMktres10'][historical_df[0].period == periods_number - historical_len + prediction_len]
 
         m = model_lgbm_63.model_lgbm('example')
         processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
-        X_test = processed_historical_df.iloc[-prediction_len:]
-
-        X_test.reset_index(inplace=True)
+        X_test = processed_historical_df[processed_historical_df.period == periods_number - historical_len + prediction_len]
 
         #import pdb;pdb.set_trace()
-        value_in_test = X_test.loc[0, 'lag_7_returnsClosePrevRaw10_max']
+        value_in_test = X_test.loc[0, 'returnsClosePrevRaw10_lag_7_max']
         real_lagged_value = processed_historical_df[(-prediction_len - 6):(-prediction_len + 1)]['returnsClosePrevRaw10'].max() 
         self.assertEqual(value_in_test, real_lagged_value)
-        self.assertEqual(m.max_lag, 200)
+        self.assertEqual(m.max_lag, 14)
         print("lagged feature test OK")
 
     @unittest.skip("do not print")

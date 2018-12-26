@@ -16,6 +16,19 @@ class testcase(unittest.TestCase):
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
     def test_generate_features(self):
+        """
+        this is one of the most important tests,
+        the idea is that it needs to  make sure that all the
+        generated features are exactly as imagined.
+        !!NOT ONLY DIMENTIONAL AND SANITY CHECK!!
+        you actually need to validate your hypotesis on the feats
+
+        example:
+        in two-sigma-kaggle I was generating lagged features but
+        I forgot to add groupby('asset') and so all the features
+        were basically crap. I got low score and I had no idea why.
+        I was only check that the feature were generated! 
+        """
         m = model_lgbm_baseline.model_lgbm_baseline('example')
         complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
 
@@ -26,7 +39,18 @@ class testcase(unittest.TestCase):
         # assert here on newly generated features
         self.assertFalse(complete_features.empty)
         self.assertTrue('weekday' in complete_features.columns)
-        import pdb;pdb.set_trace()
+
+        poss = [9000, 9200, 9500]
+        cols = ['returnsClosePrevRaw10', 'returnsOpenPrevMktres10']
+        lags = ['3', '7']
+        for pos in poss:
+            for lag in lags:
+                for col in cols:
+                    got = complete_features.iloc[pos]['lag_'+lag+'_'+col+'_max']
+                    code = self.market_train_df.iloc[pos]['assetCode']
+                    real = self.market_train_df[self.market_train_df['assetCode'] == code][col][-(int(lag)):].fillna(0).max()
+                    self.assertEqual(got, real)
+
         print("generate features test OK")
 
     @unittest.skip("for later")
