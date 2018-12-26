@@ -1,5 +1,5 @@
 import unittest
-import model_lgbm_baseline
+import model_lgbm_63
 import pandas as pd
 
 
@@ -16,7 +16,7 @@ class testcase(unittest.TestCase):
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
     def test_generate_features(self):
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
 
         # _generate_features must not change the given dataset in place
@@ -25,13 +25,26 @@ class testcase(unittest.TestCase):
 
         # assert here on newly generated features
         self.assertFalse(complete_features.empty)
-        self.assertTrue('weekday' in complete_features.columns)
-        import pdb;pdb.set_trace()
+        top_features = [
+        'returnsClosePrevRaw10_lag_7_mean',
+        'assetName_mean_open',
+        'returnsClosePrevRaw10_lag_14_max',
+        'returnsClosePrevRaw10_lag_14_min',
+        'returnsClosePrevMktres10_lag_14_max',
+        'returnsClosePrevMktres10_lag_7_mean',
+        'returnsClosePrevMktres10_lag_14_min',
+        'assetName_mean_close',
+        'returnsClosePrevRaw10_lag_14_mean',
+        'volume'
+        ]
+        for feat in top_features:
+            self.assertTrue(feat in complete_features.columns)
+        print(complete_features.columns)
         print("generate features test OK")
 
-    @unittest.skip("for later")
+    #@unittest.skip("wait")
     def test_train(self):
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         self.assertTrue(m.model is None)
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         self.assertEqual(type(m.model), m.type)
@@ -42,7 +55,7 @@ class testcase(unittest.TestCase):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict(X_test, verbose=True)
@@ -58,7 +71,7 @@ class testcase(unittest.TestCase):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         m.predict(X_test, verbose=True, do_shap=True)
@@ -70,7 +83,7 @@ class testcase(unittest.TestCase):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict_rolling(historical_df, len(y_test), verbose=True)
@@ -91,7 +104,7 @@ class testcase(unittest.TestCase):
         historical_df  = [self.market_train_df.iloc[-historical_len:], self.news_train_df[-historical_len:]]
         y_test = self.target[-prediction_len:]
 
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
         X_test = processed_historical_df.iloc[-prediction_len:]
 
@@ -106,13 +119,13 @@ class testcase(unittest.TestCase):
 
     @unittest.skip("do not print")
     def test_inspect(self):
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         m.inspect(self.market_train_df)
 
     @unittest.skip("this is computationally heavy")
     def test_train_with_fulldataset(self):
-        m = model_lgbm_baseline.model_lgbm_baseline('example')
+        m = model_lgbm_63.model_lgbm('example')
         self.assertTrue(m.model is None)
 
         print("loading full dataset ..")
