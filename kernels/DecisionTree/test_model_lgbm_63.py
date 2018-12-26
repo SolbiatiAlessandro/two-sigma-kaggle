@@ -100,28 +100,38 @@ class testcase(unittest.TestCase):
         """simulate historical_df pattern to check 
         historical features work properly"""
 
-        self.market_train_df = pd.read_csv("../data/market_train_df.csv").drop('Unnamed: 0', axis=1)
-
-        #in days
-        historical_len = 40
-        prediction_len = 1
+        # this is the length in days of the hist dataset
+        # emulating the submission system
+        max_lag = 40
 
         # this add the column period to the dataframe
+        # as written in submissino loop
         times = self.market_train_df.time.unique()
-        periods_number = len(times)
+
+        # we are currently simulating at the last period
+        current_period = len(times) - 1
         self.market_train_df['period'] = self.market_train_df['time'].apply(lambda s: np.where(times == s)[0][0])
 
-        import pdb;pdb.set_trace()
-        historical_df  = self.market_train_df[self.market_train_df['period'] <= periods_number - historical_len], None
-        y_test = historical_df[0]['returnsOpenNextMktres10'][historical_df[0].period == periods_number - historical_len + prediction_len]
-
+        # create historical and process it
+        historical_df  = self.market_train_df[self.market_train_df['period'] > current_period - max_lag - 1], None
         m = model_lgbm_63.model_lgbm('example')
-        processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
-        X_test = processed_historical_df[processed_historical_df.period == periods_number - historical_len + prediction_len]
 
-        #import pdb;pdb.set_trace()
-        value_in_test = X_test.loc[0, 'returnsClosePrevRaw10_lag_7_max']
-        real_lagged_value = processed_historical_df[(-prediction_len - 6):(-prediction_len + 1)]['returnsClosePrevRaw10'].max() 
+        # processed_historical_df goes from current_period - max lag, to current_period (even if it is zero indexed)
+        processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
+
+        X_test = processed_historical_df[processed_historical_df.period == current_period]
+
+        # to test the lagged feature let's examine the first asset of the current period
+        first_asset_open = self.market_train_df[self.market_train_df['period'] == 68].iloc[0].open
+        first_asset_code = self.market_train_df[self.market_train_df['period'] == 68].iloc[0].assetCode
+        print("testing rolling predictions on "+first_asset_code)
+        self.assertEqual(first_asset_open, X_test.iloc[0].open)
+
+        # this is the value in the prediction batch
+        value_in_test = X_test.iloc[0][ 'returnsClosePrevRaw10_lag_7_max']
+        # this is the computation of the real value from market_train
+        real_lagged_value = self.market_train_df[self.market_train_df.assetCode == first_asset_code][ self.market_train_df.period > current_period - 7 ]['returnsClosePrevRaw10'].max()
+
         self.assertEqual(value_in_test, real_lagged_value)
         self.assertEqual(m.max_lag, 14)
         print("lagged feature test OK")
