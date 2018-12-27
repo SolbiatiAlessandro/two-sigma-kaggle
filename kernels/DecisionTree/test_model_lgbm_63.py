@@ -44,7 +44,7 @@ class testcase(unittest.TestCase):
         print(complete_features.columns)
         print("generate features test OK")
 
-    @unittest.skip("wait")
+    #@unittest.skip("wait")
     def test_train(self):
         m = model_lgbm_63.model_lgbm('example')
         self.assertTrue(m.model is None)
@@ -95,7 +95,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(len(y_test), len(got))
         print("rolling predictions test OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_lagged_eatures(self):
         """simulate historical_df pattern to check 
         historical features work properly"""
@@ -149,6 +149,8 @@ class testcase(unittest.TestCase):
 
         print("loading full dataset ..")
         self.market_train_df = pd.read_csv("../data/market_train_df.csv").drop('Unnamed: 0', axis=1)
+        self.market_train_df = self.market_train_df.loc[self.market_train_df['time'] >= '2016-01-01 22:00:00+0000']
+
         self.news_train_df = None
         
         self.market_cols = list(self.market_train_df.columns)

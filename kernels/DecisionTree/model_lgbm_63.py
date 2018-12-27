@@ -191,10 +191,10 @@ class model_lgbm():
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
 
             
-        time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
+        time_reference = X[0]['time'].reset_index(drop=True) #time is dropped in preprocessing, but is needed later for metrics eval
 
-        X = self._generate_features(X[0], X[1], verbose=verbose)
-        Y = Y.clip(Y.quantile(0.001), Y.quantile(0.999))
+        X = self._generate_features(X[0], X[1], verbose=verbose).reset_index(drop=True)
+        Y = Y.clip(Y.quantile(0.001), Y.quantile(0.999)).reset_index(drop=True)
 
         # split X in X_train and Y_val
         split = int(len(X) * 0.8)
@@ -208,6 +208,7 @@ class model_lgbm():
         assert X_train.shape[1] == X_val.shape[1]
 
         # universe filtering on validation set
+        import pdb;pdb.set_trace()
         universe_filter = X['universe'][split:] == 1.0
         X_val = X_val[universe_filter]
         Y_val = Y_val[universe_filter]
