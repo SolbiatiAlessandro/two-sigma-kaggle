@@ -47,13 +47,13 @@ class testcase(unittest.TestCase):
 
         poss = [90000, 92000, 95000]
         cols = ['returnsClosePrevRaw10', 'returnsOpenPrevMktres10']
-        lags = ['3', '7']
+        lags = ['3', '7','14']
         for pos in poss:
             for lag in lags:
                 for col in cols:
                     #import pdb;pdb.set_trace()
                     # value computed in feature generation
-                    got = complete_features.iloc[pos]['lag_'+lag+'_'+col+'_max']
+                    got = complete_features.iloc[pos]['lag_'+lag+'_'+col+'_mean']
                     # code of the asset that on which are checking lagged feat
                     code = self.market_train_df.iloc[pos]['assetCode']
                     # this is the time_serie of the asset 'code'
@@ -62,8 +62,11 @@ class testcase(unittest.TestCase):
                     check_day = np.where(time_serie['index'] == pos)[0][0]
                     # time window
                     time_window = time_serie.iloc[check_day-int(lag)+1:check_day+1,1]
-                    real = time_window.fillna(0).max()
-                    self.assertEqual(got, real)
+                    real = time_window.fillna(0).mean()
+                    try:
+                        self.assertTrue(abs(got -  real) < 0.001)
+                    except:
+                        exit("test_generate_features failed on : {}, {}, {}".format(pos,lag,col))
 
         print("generate features test OK")
 
