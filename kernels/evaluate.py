@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import pickle as pk
 import os
+from utils import progress
 
 def main():
     parser = argparse.ArgumentParser(description='this is a command-line script to evaluate one or more standard models and compare predictions: python evaluate.py DecisionTrees/model1.py NeuralNets/model2.py')
@@ -34,13 +35,13 @@ def main():
     for i, model in enumerate(models):
         if os.path.isfile("predictions/"+paths[i]):
             print("\n\nPrediction file already found for "+paths[i])
-            print("[NO FOR SKIP] do you want to train model and predict anyway? (it will overwrite predictions) y/n ")
+            print("[YES FOR TRAIN/NO FOR SKIP] do you want to train model and predict anyway? (it will overwrite predictions) y/n ")
             got = input()
             if got == "n":
                 continue
         _model = model(paths[i])
         _model.train([market_train_df, None], train_target, verbose=True)
-        predictions = _model.predict(market_test_df)
+        model_predictions = _model.predict([market_test_df, None])
         print("Generated prediction files for "+paths[i])
 
         pk.dump(model_predictions, open("predictions/"+paths[i], "wb"))

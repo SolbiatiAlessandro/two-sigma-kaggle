@@ -8,6 +8,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from datetime import datetime
 import shap
+import sys
 
 
 def sigma_score(preds, valid_data):
@@ -43,6 +44,7 @@ class model():
         self.type             = lgb.Booster
         self.training_results = None
         print("\ninit model {}".format(self.name))
+        sys.path.insert(0, '../') # this is for imports from /kernels
 
     def _generate_features(self, market_data, news_data, verbose=False):
         """
@@ -66,6 +68,7 @@ class model():
         Returns:
             complete_features: pandas.DataFrame
         """
+        from utils import progress
         start_time = time()
         if verbose: print("Starting features generation for model {}, {}".format(self.name, ctime()))
 
@@ -75,8 +78,11 @@ class model():
             complete_features.drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
 
         # [36] short-term lagged features on returns
-        for feature in ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10']:
-            for lag in [3,7,14]:
+        features = ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10'] 
+        lags = [3,7,14] 
+        progress(0, len(lags)*len(features), prefix = 'Lagged features generation:', length=50)
+        for _feature, feature in enumerate(features):
+            for _lag, lag in enumerate(lags):
                 assetGroups = complete_features.groupby(['assetCode'])
 
                 complete_features['lag_{}_{}_max'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).max().reset_index().set_index('level_1').iloc[:, 1].sort_index()
@@ -85,8 +91,11 @@ class model():
 
                 complete_features['lag_{}_{}_mean'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).mean().reset_index().set_index('level_1').iloc[:, 1].sort_index()
 
+                progress(_feature * len(lags) + _lag, len(lags) * len(features), 
+                        prefix = 'Lagged features generation:', length = 50)
 
-        self.max_lag = 14
+
+        self.max_lag = max(lags)
                 
         # [1]  day of the week
         #if type(complete_features['time'][0]) == pd._libs.tslibs.timestamps.Timestamp:
