@@ -28,7 +28,7 @@ def sigma_score(preds, valid_data):
 
     return 'sigma_score', score, True
 
-class model_lgbm_baseline():
+class model():
     """this is a baseline lightLGB model with simple features
 
     this class is for a model (that can also be
@@ -206,7 +206,6 @@ class model_lgbm_baseline():
         self.training_results = training_results
         return training_results 
 
-
     def predict(self, X, verbose=False, do_shap=False):
         """
         given a block of X features gives prediction for everyrow
@@ -236,7 +235,6 @@ class model_lgbm_baseline():
 
         if verbose: print("Finished prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
-
 
     def predict_rolling(self, historical_df, prediction_length, verbose=False):
         """
@@ -285,5 +283,3 @@ class model_lgbm_baseline():
             f=lgb.plot_importance(self.model)
             f.figure.set_size_inches(10, 30) 
             plt.show()
-
-
