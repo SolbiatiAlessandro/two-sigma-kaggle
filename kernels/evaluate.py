@@ -7,6 +7,7 @@ import numpy as np
 import pickle as pk
 import os
 from utils import progress
+from matplotlib import pyplot as plt
 
 def main():
     parser = argparse.ArgumentParser(description='this is a command-line script to evaluate one or more standard models and compare predictions: python evaluate.py DecisionTrees/model1.py NeuralNets/model2.py')
@@ -46,10 +47,18 @@ def main():
 
         pk.dump(model_predictions, open("predictions/"+paths[i], "wb"))
         score = sigma_score(model_predictions, test_target, test_time)
-        print("######### "+paths[i]+" #########")
+        
+        print("#"*10+paths[i]+"#"*10)
         print("sigma score: "+str(score))
-        print("#########             #########")
+        print("#"*(20+len(paths[i])))
 
+    for path in paths:
+        loaded_predictions = pk.load(open("predictions/"+paths[i], "rb"))
+        plt.hist(loaded_predictions, bins='auto', label=path)
+    print("printing predictions distribution..")
+    plt.title("historgram for different prediction distributions")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
