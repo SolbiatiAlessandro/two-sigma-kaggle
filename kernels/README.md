@@ -3,11 +3,11 @@ DOCS
 Guidelines [follow carefully]
 ==========
 
- - every model to be used must satisfy the APIs requirements of model_template.py, and must pass all the tests like test_model_template.py
+ - every model to be used must satisfy the APIs requirements of DecisionTree/model_lgbm_baseline.py, and must pass all the tests like DecisionTree/test_model_lgbm_baseline.py
 
 - data preprocessing is done at the beggining over the whole tranining dataset, and it MUST not add new features. New features must be added only during the _generate_features method.
 
-- you can see a complete example on how to fit a single model in the kernel SINGLE MODEL SUBMISSION (TEMPLATE)
+- you can see a complete example on how to fit a single model in the kernel Linear/SINGLE MODEL SUBMISSION (TEMPLATE)
 
 ISSUES
 ======
