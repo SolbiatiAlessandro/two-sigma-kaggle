@@ -80,12 +80,20 @@
 		<td>simple fork of eda 67 with split validation</td>
 	</tr>
 	<tr>
-		<td>9</td>
+		<td>10</td>
 		<td>forked eda 67 + cross validation</td>
 		<td>na</td>
 		<td>na</td>
 		<td>0.67031</td>
 		<td>instead of split cross validation added random</td>
+	</tr>
+	<tr>
+		<td>11</td>
+		<td>model_lgbm_baseline </td>
+		<td>(l1)0.0386891</td>
+		<td>(l1)0.0418056</td>
+		<td>0.62235</td>
+		<td>STANDARD MODEL, split validation, regression l1</td>
 	</tr>
 </table>
 <br>
@@ -100,6 +108,7 @@
 	<ul><b>[8]</b>: standardize LGBM, added a lot of feature but score unexpecedly low. This uses binary classification (so predict in [0,1])</ul>
 	<ul><b>[9]</b>: now that we have a standard protocol I can start exploring. I tried to fork and submit eda 67 and turns out that score is super low. Reading the comments turns out is because of validation. If you put cross validation it is said to get 0.69 (!?) how is it possible? I tried to submit kernel with cross validation and see results. </ul>
 	<ul><b>[10]</b>: strange result, got a 0.1 increase in leatherboard (0.67) thanks to changing cross validation from split to random, need to check different distribution of prediction between the twos</ul>
+	<ul><b>[11]</b>: first STANDARD MODEL submission working properly, the model is written from scratch by me using split validation, [36] short-term lagged features on returns + weekday, regression l1 and params1 from eda 67. Training looks pretty healthy, stopped at 13th iteration. Most important feats: lag_14_openRaw10_max, volume, and lag_14_openRaw10_min. <img src="trainings/model_lgbm_baseline.png"></ul>
 
 </li>
 </li>
