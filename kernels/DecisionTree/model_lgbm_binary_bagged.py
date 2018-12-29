@@ -40,8 +40,8 @@ class model():
 
     def __init__(self, name):
         self.name             = name
-        self.model            = None
         self.type             = lgb.Booster
+        self.model1, self.model2 = None, None
         self.training_results = None
         print("\ninit model {}".format(self.name))
         sys.path.insert(0, '../') # this is for imports from /kernels
@@ -122,9 +122,9 @@ class model():
         
         - split 0.8 train validation
         - universe filter on validation
-        - custom metric used (sigma_scored) , 
+        - binary classification
             need to put 'metric':'None' in parameters
-        - one single lgbm with params_1 from script 67
+        - bagging of two models
         
         Args:
             X: [market_train_df, news_train_df]
@@ -176,39 +176,53 @@ class model():
         lgb_val.params = {
             'extra_time' : time_val.factorize()[0]
         }
-        
+
         x_1 = [0.19000424246380565, 2452, 212, 328, 202]
         x_2 = [0.19016805202090095, 2583, 213, 312, 220]
-        params_1 = {
-            # from script 67
-            'task': 'train',
-            'boosting_type': 'gbdt',
-            'objective': 'regression_l1',
-            # 'objective': 'regression',
-            '_earning_rate': x_1[0],
-            'num_leaves': x_1[1],
-            'min_data_in_leaf': x_1[2],
-            # 'num_iteration': x_1[3],
-            'num_iteration': 239,
-            'max_bin': x_1[4],
-            'lambda_l1': 0.0,
-            'lambda_l2' : 1.0,
-            'verbose': 1
-        }
 
-        
+        params_1 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',
+                'objective': 'binary',
+                'learning_rate': x_1[0],
+                'num_leaves': x_1[1],
+                'min_data_in_leaf': x_1[2],
+                'num_iteration': 239,
+                'max_bin': x_1[4],
+                'verbose': 1
+            }
+
+        params_2 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',
+                'objective': 'binary',
+                'learning_rate': x_2[0],
+                'num_leaves': x_2[1],
+                'min_data_in_leaf': x_2[2],
+                'num_iteration': 172,
+                'max_bin': x_2[4],
+                'verbose': 1
+            }
+
         training_results = {}
-        # start training
-        self.model = lgb.train(
-                params_1, 
+        self.model1 = lgb.train(params_1,
                 lgb_train,
                 num_boost_round=1000,
                 valid_sets=(lgb_val,lgb_train),
                 valid_names=('valid','train'),
+                early_stopping_rounds=15,
+                verbose_eval=1,
+                evals_result=training_results)
+
+        self.model2 = lgb.train(params_2,
+                lgb_train,
+                valid_sets=(lgb_val,lgb_train),
+                valid_names=('valid','train'),
+                num_boost_round=1000,
                 verbose_eval=1,
                 early_stopping_rounds=15,
-                #feval=sigma_score,
                 evals_result=training_results)
+
         del X, X_train, X_val
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
@@ -228,17 +242,20 @@ class model():
         """
         start_time = time()
         if verbose: print("Starting prediction for model {}, {}".format(self.name, ctime()))
-        if self.model is None:
+        if self.model1 is None:
             raise "Error: model is not trained!"
 
         X_test = self._generate_features(X[0], X[1], verbose=verbose)
         if verbose: print("X_test shape {}".format(X_test.shape))
-        y_test = self.model.predict(X_test)
+
+        y_test = (self.model1.predict(X_test) + self.model2.predict(X_test))/2
+        y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
+        y_test = y_test * 2 - 1
 
         if do_shap:
             #import pdb;pdb.set_trace()
             print("printing shap analysis..")
-            explainer = shap.TreeExplainer(self.model)
+            explainer = shap.TreeExplainer(self.model1)
             shap_values = explainer.shap_values(X_test)
             shap.summary_plot(shap_values, X_test)
 
@@ -261,7 +278,9 @@ class model():
         processed_historical_df = self._generate_features(historical_df[0], historical_df[1], verbose=verbose)
         X_test = processed_historical_df.iloc[-prediction_length:]
         if verbose: print("X_test shape {}".format(X_test.shape))
-        y_test = self.model.predict(X_test)
+        y_test = (self.model1.predict(X_test) + self.model2.predict(X_test))/2
+        y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
+        y_test = y_test * 2 - 1
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
@@ -286,10 +305,10 @@ class model():
             plt.legend()
             plt.show()
 
-        if not self.model:
+        if not self.model1:
             print("Error: No model available")
         else:
             print("printing feature importance..")
-            f=lgb.plot_importance(self.model)
+            f=lgb.plot_importance(self.model1)
             f.figure.set_size_inches(10, 30) 
             plt.show()
