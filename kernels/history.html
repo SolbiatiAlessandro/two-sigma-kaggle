@@ -98,9 +98,9 @@
 	<tr>
 		<td>12</td>
 		<td>model_lgbm_random_validation</td>
-		<td></td>
-		<td></td>
-		<td>0.627..</td>
+		<td>0.0332928</td>
+		<td>0.0355084</td>
+		<td>0.62704</td>
 		<td>STANDARD MODEL, random validation, regression l1</td>
 	</tr>
 </table>
@@ -117,7 +117,7 @@
 	<ul><b>[9]</b>: now that we have a standard protocol I can start exploring. I tried to fork and submit eda 67 and turns out that score is super low. Reading the comments turns out is because of validation. If you put cross validation it is said to get 0.69 (!?) how is it possible? I tried to submit kernel with cross validation and see results. </ul>
 	<ul><b>[10]</b>: strange result, got a 0.1 increase in leatherboard (0.67) thanks to changing cross validation from split to random, need to check different distribution of prediction between the twos</ul>
 	<ul><b>[11]</b>: first STANDARD MODEL submission working properly, the model is written from scratch by me using split validation, [36] short-term lagged features on returns + weekday, regression l1 and params1 from eda 67. Training looks pretty healthy, stopped at 13th iteration. Most important feats: lag_14_openRaw10_max, volume, and lag_14_openRaw10_min. <img src="trainings/model_lgbm_baseline.png"></ul>
-	<ul><b>[12]</b>:identical model as above, just changed test train validation split. Some strange things happened. (1) Score same as before (didnt change likein 10) (2) trained for over 210 periods and didnt meet early stopping, will attach train later</ul>
+	<ul><b>[12]</b>:identical model as above, just changed test train validation split. Some strange things happened. (1) Score same as before (didnt change likein 10) (2) trained for over 210 periods and didnt meet early stopping, will attach train later. Is this overfitting? <img src="trainings/model_lgbm_random_validation.png"></ul>
 
 </li>
 </li>
