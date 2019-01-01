@@ -79,9 +79,58 @@ class model():
             complete_features.drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
 
         # [36] short-term lagged features on returns
-        features = ['returnsClosePrevRaw10','returnsOpenPrevRaw10','returnsClosePrevMktres10','returnsOpenPrevMktres10'] 
-        lags = [3,7,14] 
-        progress(0, len(lags)*len(features), prefix = 'Lagged features generation:', length=50)
+          
+        from multiprocessing import Pool 
+
+        def create_lag(df_code,n_lag=[3,7,14,],shift_size=1):
+            code = df_code['assetCode'].unique()
+            
+            progress(0, len(lags)*len(features), prefix = 'Lagged features generation:', length=50)
+            for _feature, col in enumerate(return_features):
+                for _lag, window in n_lag:
+                    rolled = df_code[col].shift(shift_size).rolling(window=window)
+                    lag_mean = rolled.mean()
+                    lag_max = rolled.max()
+                    lag_min = rolled.min()
+                    lag_std = rolled.std()
+                    df_code['lag_%s_%s_mean'%(window,col)] = lag_mean
+                    df_code['lag_%s_%s_max'%(window,col)] = lag_max
+                    df_code['lag_%s_%s_min'%(window,col)] = lag_min
+        #             df_code['%s_lag_%s_std'%(col,window)] = lag_std
+                    progress(_feature * len(n_lag) + _lag, len(n_lag) * len(return_features), 
+                        prefix = 'Lagged features generation:', length = 50)
+            return df_code.fillna(-1)
+
+        def generate_lag_features(df,n_lag = [3,7,14]):
+            features = ['time', 'assetCode', 'assetName', 'volume', 'close', 'open',
+               'returnsClosePrevRaw1', 'returnsOpenPrevRaw1',
+               'returnsClosePrevMktres1', 'returnsOpenPrevMktres1',
+               'returnsClosePrevRaw10', 'returnsOpenPrevRaw10',
+               'returnsClosePrevMktres10', 'returnsOpenPrevMktres10',
+               'returnsOpenNextMktres10', 'universe']
+            
+            assetCodes = df['assetCode'].unique()
+            print(assetCodes)
+            all_df = []
+            df_codes = df.groupby('assetCode')
+            df_codes = [df_code[1][['time','assetCode']+return_features] for df_code in df_codes]
+            print('total %s df'%len(df_codes))
+            
+            pool = Pool(4)
+            all_df = pool.map(create_lag, df_codes)
+            
+            new_df = pd.concat(all_df)  
+            new_df.drop(return_features,axis=1,inplace=True)
+            pool.close()
+            
+            return new_df
+
+        return_features = ['returnsClosePrevMktres10','returnsClosePrevRaw10','open','close']
+        n_lag = [3,7,14]
+        new_df = generate_lag_features(complete_features,n_lag=n_lag)
+        complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
+
+        """ TO BE DELETED (my version of features generation)
         for _feature, feature in enumerate(features):
             for _lag, lag in enumerate(lags):
                 assetGroups = complete_features.groupby(['assetCode'])
@@ -92,11 +141,10 @@ class model():
 
                 complete_features['lag_{}_{}_mean'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).mean().reset_index().set_index('level_1').iloc[:, 1].sort_index()
 
-                progress(_feature * len(lags) + _lag, len(lags) * len(features), 
-                        prefix = 'Lagged features generation:', length = 50)
 
+        """
 
-        self.max_lag = max(lags)
+        self.max_lag = 14
                 
         # [1]  day of the week
         #if type(complete_features['time'][0]) == pd._libs.tslibs.timestamps.Timestamp:
@@ -109,6 +157,14 @@ class model():
                 
         complete_features.drop(['time','assetCode','assetName'],axis=1,inplace=True)
         complete_features.fillna(0, inplace=True) # TODO: for next models control this fillna with EDA
+
+        """
+        # here there is a transformation of input features
+        mins = np.min(complete_features, axis=0)
+        maxs = np.max(complete_features, axis=0)
+        rng = maxs - mins
+        complete_features = 1 - ((maxs - complete_features) / rng)
+        """
 
         if verbose: print("Finished features generation for model {}, TIME {}".format(self.name, time()-start_time))
         return complete_features
@@ -150,11 +206,6 @@ class model():
         X = self._generate_features(X[0], X[1], verbose=verbose)
         Y = self._generate_target(Y)
 
-        # here there is a transformation of input features
-        mins = np.min(X, axis=0)
-        maxs = np.max(X, axis=0)
-        rng = maxs - mins
-        X = 1 - ((maxs - X) / rng)
 
         from sklearn import model_selection
         X_train, X_val, Y_train, Y_val, universe_train, universe_val, time_train, time_val= model_selection.train_test_split(X, Y, X['universe'], time_reference, test_size=0.25, random_state=99)

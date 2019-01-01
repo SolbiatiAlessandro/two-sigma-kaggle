@@ -16,7 +16,7 @@ class testcase(unittest.TestCase):
         self.target = self.market_train_df['returnsOpenNextMktres10']
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
-    @unittest.skip("wait")
+    #@unittest.skip("wait")
     def test_generate_features(self):
         """
         this is one of the most important tests,
@@ -79,7 +79,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(type(m.model1), m.type)
         print("train test OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_predict(self):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
@@ -193,7 +193,7 @@ class testcase(unittest.TestCase):
 
         print(got.describe())
 
-    #@unittest.skip("wait")
+    @unittest.skip("wait")
     def test_prediction_postprocessing(self):
         m = model_lgbm_71.model('example')
         model1_predictions = np.full(100, 0.4)

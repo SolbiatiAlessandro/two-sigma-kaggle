@@ -29,11 +29,14 @@ DEV
 
 - standardize eda71 (make sure to replicate results)
 
+
 - ensemble with NN ( standardized stacking )
 
 - ensemble with XGBoost and Catboost (later)
 
 - clean data better
+
+- select only top features, dont use all
 
 - try regularization of prediction
 
