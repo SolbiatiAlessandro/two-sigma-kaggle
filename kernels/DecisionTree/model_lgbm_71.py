@@ -157,7 +157,7 @@ class model():
         X_val = X_val[universe_filter]
         Y_val = Y_val[universe_filter]
         binary_labels_val = binary_labels_val[universe_filter]
-        assert X_validation.shape[0] == binary_labels_validation.shape[0] == Y_validation.shape[0]
+        assert X_val.shape[0] == binary_labels_val.shape[0] == Y_val.shape[0]
         
         # this is a time_val series used to calc the sigma_score later, applied split and universe filter
         time_val = time_val[universe_filter]

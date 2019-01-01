@@ -1,5 +1,5 @@
 import unittest
-import model_lgbm_binary_bagged_random_validation
+import model_lgbm_71
 import pandas as pd
 import numpy as np
 
@@ -31,7 +31,7 @@ class testcase(unittest.TestCase):
         were basically crap. I got low score and I had no idea why.
         I was only check that the feature were generated! 
         """
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
 
         # _generate_features must not change the given dataset in place
@@ -73,7 +73,7 @@ class testcase(unittest.TestCase):
 
     @unittest.skip("for later")
     def test_train(self):
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         self.assertTrue(m.model1 is None)
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         self.assertEqual(type(m.model1), m.type)
@@ -84,7 +84,7 @@ class testcase(unittest.TestCase):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict(X_test, verbose=True)
@@ -100,7 +100,7 @@ class testcase(unittest.TestCase):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         m.predict(X_test, verbose=True, do_shap=True)
@@ -112,7 +112,7 @@ class testcase(unittest.TestCase):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
         
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
 
         got = m.predict_rolling(historical_df, len(y_test), verbose=True)
@@ -141,7 +141,7 @@ class testcase(unittest.TestCase):
 
         # create historical and process it
         historical_df  = self.market_train_df[self.market_train_df['period'] > current_period - max_lag - 1], None
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
 
         # processed_historical_df goes from current_period - max lag, to current_period (even if it is zero indexed)
         processed_historical_df = m._generate_features(historical_df[0], historical_df[1])
@@ -165,13 +165,13 @@ class testcase(unittest.TestCase):
 
     @unittest.skip("do not print")
     def test_inspect(self):
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
         m.inspect(self.market_train_df)
 
     @unittest.skip("this is computationally heavy")
     def test_train_with_fulldataset(self):
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         self.assertTrue(m.model is None)
 
         print("loading full dataset ..")
@@ -195,7 +195,7 @@ class testcase(unittest.TestCase):
 
     #@unittest.skip("wait")
     def test_prediction_postprocessing(self):
-        m = model_lgbm_binary_bagged_random_validation.model('example')
+        m = model_lgbm_71.model('example')
         model1_predictions = np.full(100, 0.4)
         model2_predictions = np.full(100, 0.6)
         y_test = m._postprocess([model1_predictions, model2_predictions])
