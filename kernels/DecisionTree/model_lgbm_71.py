@@ -113,6 +113,14 @@ class model():
         if verbose: print("Finished features generation for model {}, TIME {}".format(self.name, time()-start_time))
         return complete_features
 
+    def _generate_target(self, Y):
+        """
+        given Y generate binary labels
+        """
+        binary_labels = Y >= 0
+        binary_labels = binary_labels.values
+        return binary_labels.astype(int)
+
     def train(self, X, Y, verbose=False):
         """
         GENERAL:
@@ -140,20 +148,18 @@ class model():
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
 
         X = self._generate_features(X[0], X[1], verbose=verbose)
-        Y = Y.clip(Y.quantile(0.001), Y.quantile(0.999))
-        binary_labels = Y >= 0
+        Y = self._generate_target(Y)
 
         # here there is a transformation of input features
-        import pdb;pdb.set_trace()
         mins = np.min(X, axis=0)
         maxs = np.max(X, axis=0)
         rng = maxs - mins
         X = 1 - ((maxs - X) / rng)
 
         from sklearn import model_selection
-        X_train, X_val, Y_train, Y_val, universe_train, universe_val, time_train, time_val, binary_labels_train, binary_labels_val = model_selection.train_test_split(X, Y, X['universe'], time_reference, binary_labels, test_size=0.25, random_state=99)
+        X_train, X_val, Y_train, Y_val, universe_train, universe_val, time_train, time_val= model_selection.train_test_split(X, Y, X['universe'], time_reference, test_size=0.25, random_state=99)
 
-        assert X_train.shape[0] == binary_labels_train.shape[0] == Y_train.shape[0]
+        assert X_train.shape[0] == Y_train.shape[0]
 
         if verbose: print("X_train shape {}".format(X_train.shape))
         if verbose: print("X_val shape {}".format(X_val.shape))
@@ -164,8 +170,7 @@ class model():
         universe_filter = universe_val.apply(lambda x: bool(x))
         X_val = X_val[universe_filter]
         Y_val = Y_val[universe_filter]
-        binary_labels_val = binary_labels_val[universe_filter]
-        assert X_val.shape[0] == binary_labels_val.shape[0] == Y_val.shape[0]
+        assert X_val.shape[0] == Y_val.shape[0]
         
         # this is a time_val series used to calc the sigma_score later, applied split and universe filter
         time_val = time_val[universe_filter]
@@ -175,8 +180,8 @@ class model():
         # train parameters prearation
         train_cols = X.columns.tolist()
         assert 'returnsOpenNextMktres10' not in train_cols 
-        lgb_train = lgb.Dataset(X_train.values, binary_labels_train, feature_name=train_cols, free_raw_data=False)
-        lgb_val = lgb.Dataset(X_val.values, binary_labels_val, feature_name=train_cols, free_raw_data=False)
+        lgb_train = lgb.Dataset(X_train.values, Y_train, feature_name=train_cols, free_raw_data=False)
+        lgb_val = lgb.Dataset(X_val.values, Y_val, feature_name=train_cols, free_raw_data=False)
 
         lgb_train.params = {
             'extra_time' : time_train.factorize()[0]
