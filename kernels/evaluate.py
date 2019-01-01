@@ -10,7 +10,7 @@ from utils import progress
 from matplotlib import pyplot as plt
 
 def main():
-    parser = argparse.ArgumentParser(description='this is a command-line script to evaluate one or more standard models and compare predictions: python evaluate.py DecisionTrees/model1.py NeuralNets/model2.py')
+    parser = argparse.ArgumentParser(description='this is a command-line script to evaluate one or more standard models and compare predictions: python evaluate.py DecisionTrees.model1.py NeuralNets.model2.py')
     parser.add_argument('model_name', type=str, nargs='+',
                         help=':name of model in the form DecisionTree.model_lgbm_baseline')
     args = parser.parse_args()
@@ -34,7 +34,7 @@ def main():
     test_target = market_test_df['returnsOpenNextMktres10']
     test_target = test_target.clip(test_target.quantile(0.001), test_target.quantile(0.999))
     test_time = market_test_df['time']
-    market_test_df.drop(['returnsOpenNextMktres10'], axis=1)
+    market_test_df.drop(['returnsOpenNextMktres10'], axis=1, inplace=True)
 
     if not skip_training:
         print("\n\nStart training phase..")
@@ -62,7 +62,7 @@ def main():
 
         score = sigma_score(loaded_predictions, test_target, test_time)
         
-        print("\n"+"#"*10+paths[i]+"#"*10)
+        print("\n"+"#"*10+path+"#"*10)
         print("sigma score: "+str(score))
         print("#"*(20+len(path)))
         plt.hist(loaded_predictions, bins='auto', label=path, alpha=0.5)

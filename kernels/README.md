@@ -7,6 +7,8 @@ Guidelines [follow carefully]
 
 - data preprocessing is done at the beggining over the whole tranining dataset, and it MUST not add new features. New features must be added only during the _generate_features method.
 
+- prediction post processing is done at the ending outside the model, this is done to avoid bias in benchmarking
+
 - you can see a complete example on how to fit a single model in the kernel Linear/SINGLE MODEL SUBMISSION (TEMPLATE)
 
 ISSUES
