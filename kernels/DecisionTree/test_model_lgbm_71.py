@@ -32,15 +32,19 @@ class testcase(unittest.TestCase):
         I was only check that the feature were generated! 
         """
         m = model_lgbm_71.model('example')
-        complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True)
+        complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True, normalize=False)
 
         # _generate_features must not change the given dataset in place
         self.assertListEqual(list(self.market_train_df.columns), self.market_cols)
         self.assertListEqual(list(self.news_train_df.columns), self.news_cols)
 
-        # assert here on newly generated features
         self.assertFalse(complete_features.empty)
-        self.assertTrue('weekday' in complete_features.columns)
+
+        # assert here on newly generated features
+        # (test are not splitted on different functions
+        # since it takes a lot ot compute)
+
+        ##### TEST ON LAGGED FEATURES ####
 
         # this check takes some lagged features and
         # manually compute expected lagged values
@@ -74,7 +78,27 @@ class testcase(unittest.TestCase):
                         import pdb;pdb.set_trace()
                         exit("test_generate_features failed on : {}, {}, {}".format(pos,lag,col))
 
-        print("generate features test OK")
+        print("generate features test (lagged) OK")
+
+
+        #### TEST ON LABEL ENCODING ####
+
+        # ref sub-method data_prep() from eda 67
+
+        self.assertTrue('assetCodeT' in complete_features.columns)
+        self.assertTrue(complete_features['assetCodeT'].dtype == int)
+        self.assertEqual(
+                len(complete_features['assetCodeT'].unique()),
+                len(self.market_train_df['assetCode'].unique())
+                )
+        self.assertFalse(any(complete_features['assetCodeT'].isna()))
+
+        print("generate features test (label encoding) OK")
+
+        # don't really know how to test normalization of data
+        # complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True, normalize=True)
+
+    
 
     @unittest.skip("for later")
     def test_train(self):
@@ -84,7 +108,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(type(m.model1), m.type)
         print("train test OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_predict(self):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]
@@ -112,7 +136,7 @@ class testcase(unittest.TestCase):
 
         print("shap OK")
 
-    @unittest.skip("for later")
+    #@unittest.skip("for later")
     def test_predict_rolling(self):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
@@ -209,6 +233,16 @@ class testcase(unittest.TestCase):
         # test mapping
         self.assertTrue(all(np.full(100, 0) == y_test))
         print("test_prediction_postprocessing OK")
+
+    @unittest.skip("wait")
+    def test_clean_data(self):
+        m = model_lgbm_71.model('example')
+        dirty_array = np.full(10,5,dtype=float)
+        dirty_array[4] = np.nan # generate artificial nans
+
+        m._clean_data(pd.DataFrame(dirty_array))
+        self.assertEqual(dirty_array[4], 5.0)
+
 
 
 if __name__=="__main__":

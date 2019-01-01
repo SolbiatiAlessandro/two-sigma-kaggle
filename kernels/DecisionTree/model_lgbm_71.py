@@ -7,7 +7,8 @@ import lightgbm as lgb
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
-from datetime import datetime
+from pathos.multiprocessing import ProcessingPool as Pool
+from datetime import datetime, date
 import shap
 import sys
 
@@ -47,7 +48,20 @@ class model():
         print("\ninit model {}".format(self.name))
         sys.path.insert(0, '../') # this is for imports from /kernels
 
-    def _generate_features(self, market_data, news_data, verbose=False):
+    def _preprocess(self, market_data):
+        """optional data preprocessing"""
+        try:
+            market_data = market_data.loc[market_data['time']>=date(2010, 1, 1)]
+        except TypeError: # if 'time' is a string value
+            print("[_generate_features] 'time' is of type str and not datetime")
+            if not market_data.loc[market_data['time']>="2010"].empty:
+                # if dates are before 2010 means dataset is for testing
+                market_data = market_data.loc[market_data['time']>="2010"]
+        assert market_data.empty == False
+        return market_data
+        
+
+    def _generate_features(self, market_data, news_data, verbose=False, normalize=True):
         """
         GENERAL:
         given the original market_data and news_data
@@ -66,28 +80,29 @@ class model():
 
         Args:
             [market_train_df, news_train_df]: pandas.DataFrame
+            normalize: should be True, but for testing we need to
+                 be able to toggle to check real values
         Returns:
             complete_features: pandas.DataFrame
         """
-        from utils import progress
+        #from utils import progress
         start_time = time()
         if verbose: print("Starting features generation for model {}, {}".format(self.name, ctime()))
 
         complete_features = market_data.copy()
-        
+
         if 'returnsOpenNextMktres10' in complete_features.columns:
             complete_features.drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
 
-        # [36] short-term lagged features on returns
+        #### [36] short-term lagged features on returns ####
           
-        from pathos.multiprocessing import ProcessingPool as Pool
 
         def create_lag(df_code,n_lag=[3,7,14,],shift_size=1):
             code = df_code['assetCode'].unique()
             
             # how to print progress in preprocessing?
-            #progress(0, len(n_lag)*len(return_features), prefix = 'Lagged features generation:', length=50)
-            print("\rcreating lags for {}".format(code))
+            # progress(0, len(n_lag)*len(return_features), prefix = 'Lagged features generation:', length=50)
+            # print("\rcreating lags for {}".format(code))
             for _feature, col in enumerate(return_features):
                 for _lag, window in enumerate(n_lag):
                     rolled = df_code[col].shift(shift_size).rolling(window=window)
@@ -136,27 +151,38 @@ class model():
         n_lag = [3,7,14]
         new_df = generate_lag_features(complete_features,n_lag=n_lag)
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
-        self.max_lag = 14
-                
-        # [1]  day of the week
-        #if type(complete_features['time'][0]) == pd._libs.tslibs.timestamps.Timestamp:
-        try:    # this is Kaggle environment
-            complete_features['weekday'] = complete_features['time'].apply(lambda x: x.dayofweek)
-        except: # in test environment 'time' got to converted to str so need formatting
-            complete_features['weekday'] = complete_features['time'].apply(lambda x: datetime.strptime(x.split()[0], "%Y-%M-%d").weekday())
+        self.max_lag = max(n_lag)
 
-            
-                
-        complete_features.drop(['time','assetCode','assetName'],axis=1,inplace=True)
-        complete_features.fillna(0, inplace=True) # TODO: for next models control this fillna with EDA
+        complete_features = self._clean_data(complete_features)
 
-        """
-        # here there is a transformation of input features
-        mins = np.min(complete_features, axis=0)
-        maxs = np.max(complete_features, axis=0)
-        rng = maxs - mins
-        complete_features = 1 - ((maxs - complete_features) / rng)
-        """
+        #### [1]  generate labels encoding for assetCode ####
+
+        def data_prep(market_train):
+            """procedure from https://www.kaggle.com/guowenrui/sigma-eda-versionnew
+            """
+            lbl = {k: v for v, k in enumerate(market_train['assetCode'].unique())}
+            market_train['assetCodeT'] = market_train['assetCode'].map(lbl)
+            market_train = market_train.dropna(axis=0)
+            return market_train
+
+        complete_features = data_prep(complete_features)
+
+
+        #### drop columns ####
+
+        fcol = [c for c in complete_features if c not in ['assetCode', 'assetCodes', 'assetCodesLen', 'assetName', 'audiences', 
+                                                         'firstCreated', 'headline', 'headlineTag', 'marketCommentary', 'provider', 
+                                                                                                      'returnsOpenNextMktres10', 'sourceId', 'subjects', 'time', 'time_x', 'universe','sourceTimestamp']]
+        complete_features = complete_features[fcol]
+
+
+        #### normalization of input ####
+
+        if normalize:
+            mins = np.min(complete_features, axis=0)
+            maxs = np.max(complete_features, axis=0)
+            rng = maxs - mins
+            complete_features = 1 - ((maxs - complete_features) / rng)
 
         if verbose: print("Finished features generation for model {}, TIME {}".format(self.name, time()-start_time))
         return complete_features
@@ -164,10 +190,11 @@ class model():
     def _generate_target(self, Y):
         """
         given Y generate binary labels
+        returns:
+            up, r : (binary labels), (returns)
         """
         binary_labels = Y >= 0
-        binary_labels = binary_labels.values
-        return binary_labels.astype(int)
+        return binary_labels.astype(int).values, Y.values
 
     def train(self, X, Y, verbose=False):
         """
@@ -194,44 +221,41 @@ class model():
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
             
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
+        universe_reference = X[0]['universe']
 
         X = self._generate_features(X[0], X[1], verbose=verbose)
-        Y = self._generate_target(Y)
+        binary_Y, Y = self._generate_target(Y)
 
+        try:
+            assert X.shape[0] == binary_Y.shape[0] == Y.shape[0]
+        except AssertionError:
+            import pdb;pdb.set_trace()
+            pass
 
         from sklearn import model_selection
-        X_train, X_val, Y_train, Y_val, universe_train, universe_val, time_train, time_val= model_selection.train_test_split(X, Y, X['universe'], time_reference, test_size=0.25, random_state=99)
+        X_train, X_val,\
+        binary_Y_train, binary_Y_val,\
+        Y_train, Y_val,\
+        universe_train, universe_val,\
+        time_train, time_val = model_selection.train_test_split(
+                X, 
+                binary_Y,
+                Y,
+                universe_reference.values,
+                time_reference, test_size=0.25, random_state=99)
 
-        assert X_train.shape[0] == Y_train.shape[0]
+        assert X_train.shape[0] == Y_train.shape[0] == binary_Y_train.shape[0]
 
         if verbose: print("X_train shape {}".format(X_train.shape))
         if verbose: print("X_val shape {}".format(X_val.shape))
         assert X_train.shape[0] != X_val.shape[0]
         assert X_train.shape[1] == X_val.shape[1]
 
-        # universe filtering on validation set
-        universe_filter = universe_val.apply(lambda x: bool(x))
-        X_val = X_val[universe_filter]
-        Y_val = Y_val[universe_filter]
-        assert X_val.shape[0] == Y_val.shape[0]
-        
-        # this is a time_val series used to calc the sigma_score later, applied split and universe filter
-        time_val = time_val[universe_filter]
-        assert len(time_val) == len(X_val) 
-        assert len(time_train) == len(X_train)
-        
         # train parameters prearation
         train_cols = X.columns.tolist()
         assert 'returnsOpenNextMktres10' not in train_cols 
-        lgb_train = lgb.Dataset(X_train.values, Y_train, feature_name=train_cols, free_raw_data=False)
-        lgb_val = lgb.Dataset(X_val.values, Y_val, feature_name=train_cols, free_raw_data=False)
-
-        lgb_train.params = {
-            'extra_time' : time_train.factorize()[0]
-        }
-        lgb_val.params = {
-            'extra_time' : time_val.factorize()[0]
-        }
+        lgb_train = lgb.Dataset(X.values, binary_Y, feature_name=train_cols)
+        lgb_val = lgb.Dataset(X_val.values, binary_Y_val, feature_name=train_cols)
 
         x_1 = [0.19000424246380565, 2452, 212, 328, 202]
         x_2 = [0.19016805202090095, 2583, 213, 312, 220]
@@ -263,20 +287,19 @@ class model():
         training_results = {}
         self.model1 = lgb.train(params_1,
                 lgb_train,
-                num_boost_round=1000,
-                valid_sets=(lgb_val,lgb_train),
-                valid_names=('valid','train'),
-                early_stopping_rounds=15,
+                num_boost_round=100,
+                valid_sets=lgb_val,
+                early_stopping_rounds=5,
                 verbose_eval=1,
                 evals_result=training_results)
 
         self.model2 = lgb.train(params_2,
                 lgb_train,
-                valid_sets=(lgb_val,lgb_train),
+                valid_sets=lgb_val,
                 valid_names=('valid','train'),
-                num_boost_round=1000,
+                num_boost_round=100,
                 verbose_eval=1,
-                early_stopping_rounds=15,
+                early_stopping_rounds=5,
                 evals_result=training_results)
 
         del X, X_train, X_val
@@ -384,6 +407,26 @@ class model():
         to [-1, 1]
         """
         y_test = (predictions[0] + predictions[1])/2
+        y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
         y_test = y_test * 2 - 1
         return y_test
+
+    def _clean_data(self, data):
+        """
+        originally from function mis_impute in
+        https://www.kaggle.com/guowenrui/sigma-eda-versionnew
+
+        Args:
+            data: pd.DataFrame
+        returns:
+            cleaned data (not in place)
+        """
+        for i in data.columns:
+            if data[i].dtype == "object":
+                    data[i] = data[i].fillna("other")
+            elif (data[i].dtype == "int64" or data[i].dtype == "float64"):
+                    data[i] = data[i].fillna(data[i].mean())
+            else:
+                    pass
+        return data
 
