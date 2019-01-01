@@ -16,7 +16,7 @@ class testcase(unittest.TestCase):
         self.target = self.market_train_df['returnsOpenNextMktres10']
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
-    #@unittest.skip("wait")
+    @unittest.skip("wait")
     def test_generate_features(self):
         """
         this is one of the most important tests,
@@ -46,8 +46,12 @@ class testcase(unittest.TestCase):
         # manually compute expected lagged values
         # to check the values are correct
 
+        # note: using eda67 feats generation tests need to change
+        # since they implement shift while in my version
+        # shifting is not implemented
+
         poss = [90000, 92000, 95000]
-        cols = ['returnsClosePrevRaw10', 'returnsOpenPrevMktres10']
+        cols = ['returnsClosePrevRaw10', 'returnsClosePrevMktres10']
         lags = ['3', '7','14']
         for pos in poss:
             for lag in lags:
@@ -62,11 +66,12 @@ class testcase(unittest.TestCase):
                     # we are checking the i-th day 'check_day' of the time_serie
                     check_day = np.where(time_serie['index'] == pos)[0][0]
                     # time window
-                    time_window = time_serie.iloc[check_day-int(lag)+1:check_day+1,1]
+                    time_window = time_serie.iloc[check_day-int(lag):check_day,1]
                     real = time_window.fillna(0).mean()
                     try:
                         self.assertTrue(abs(got -  real) < 0.001)
                     except:
+                        import pdb;pdb.set_trace()
                         exit("test_generate_features failed on : {}, {}, {}".format(pos,lag,col))
 
         print("generate features test OK")
@@ -79,7 +84,7 @@ class testcase(unittest.TestCase):
         self.assertEqual(type(m.model1), m.type)
         print("train test OK")
 
-    @unittest.skip("for later")
+    #@unittest.skip("for later")
     def test_predict(self):
         X_test  = [self.market_train_df.iloc[-20:], self.news_train_df[-20:]]
         y_test = self.target[-20:]

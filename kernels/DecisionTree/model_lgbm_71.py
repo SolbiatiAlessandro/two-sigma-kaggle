@@ -80,14 +80,16 @@ class model():
 
         # [36] short-term lagged features on returns
           
-        from multiprocessing import Pool 
+        from pathos.multiprocessing import ProcessingPool as Pool
 
         def create_lag(df_code,n_lag=[3,7,14,],shift_size=1):
             code = df_code['assetCode'].unique()
             
-            progress(0, len(lags)*len(features), prefix = 'Lagged features generation:', length=50)
+            # how to print progress in preprocessing?
+            #progress(0, len(n_lag)*len(return_features), prefix = 'Lagged features generation:', length=50)
+            print("\rcreating lags for {}".format(code))
             for _feature, col in enumerate(return_features):
-                for _lag, window in n_lag:
+                for _lag, window in enumerate(n_lag):
                     rolled = df_code[col].shift(shift_size).rolling(window=window)
                     lag_mean = rolled.mean()
                     lag_max = rolled.max()
@@ -97,8 +99,8 @@ class model():
                     df_code['lag_%s_%s_max'%(window,col)] = lag_max
                     df_code['lag_%s_%s_min'%(window,col)] = lag_min
         #             df_code['%s_lag_%s_std'%(col,window)] = lag_std
-                    progress(_feature * len(n_lag) + _lag, len(n_lag) * len(return_features), 
-                        prefix = 'Lagged features generation:', length = 50)
+                    #progress(_feature * len(n_lag) + _lag, len(n_lag) * len(return_features), 
+                    #prefix = 'Lagged features generation:', length = 50)
             return df_code.fillna(-1)
 
         def generate_lag_features(df,n_lag = [3,7,14]):
@@ -115,13 +117,18 @@ class model():
             df_codes = df.groupby('assetCode')
             df_codes = [df_code[1][['time','assetCode']+return_features] for df_code in df_codes]
             print('total %s df'%len(df_codes))
-            
+
             pool = Pool(4)
             all_df = pool.map(create_lag, df_codes)
             
             new_df = pd.concat(all_df)  
             new_df.drop(return_features,axis=1,inplace=True)
             pool.close()
+
+            # for the next two lines
+            # https://stackoverflow.com/questions/49888485/pathos-multiprocessings-pool-appears-to-be-nonlocal
+            pool.terminate()
+            pool.restart()
             
             return new_df
 
@@ -129,21 +136,6 @@ class model():
         n_lag = [3,7,14]
         new_df = generate_lag_features(complete_features,n_lag=n_lag)
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
-
-        """ TO BE DELETED (my version of features generation)
-        for _feature, feature in enumerate(features):
-            for _lag, lag in enumerate(lags):
-                assetGroups = complete_features.groupby(['assetCode'])
-
-                complete_features['lag_{}_{}_max'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).max().reset_index().set_index('level_1').iloc[:, 1].sort_index()
-
-                complete_features['lag_{}_{}_min'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).min().reset_index().set_index('level_1').iloc[:, 1].sort_index()
-
-                complete_features['lag_{}_{}_mean'.format(lag, feature)] = assetGroups[feature].rolling(lag, min_periods=1).mean().reset_index().set_index('level_1').iloc[:, 1].sort_index()
-
-
-        """
-
         self.max_lag = 14
                 
         # [1]  day of the week
