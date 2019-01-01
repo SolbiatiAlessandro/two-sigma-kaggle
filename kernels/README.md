@@ -26,3 +26,15 @@ DEV
 ===
 
 - implement hyperopt in standard model
+
+- standardize eda71 (make sure to replicate results)
+
+- ensemble with NN ( standardized stacking )
+
+- ensemble with XGBoost and Catboost (later)
+
+- clean data better
+
+- try regularization of prediction
+
+- finish LSTM and later ensemble
