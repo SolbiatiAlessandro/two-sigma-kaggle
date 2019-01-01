@@ -193,6 +193,18 @@ class testcase(unittest.TestCase):
 
         print(got.describe())
 
+    #@unittest.skip("wait")
+    def test_prediction_postprocessing(self):
+        m = model_lgbm_binary_bagged_random_validation.model('example')
+        model1_predictions = np.full(100, 0.4)
+        model2_predictions = np.full(100, 0.6)
+        y_test = m._postprocess([model1_predictions, model2_predictions])
+        # test bagging 
+        self.assertEqual(y_test.shape, (100, ))
+        # test mapping
+        self.assertTrue(all(np.full(100, 0) == y_test))
+        print("test_prediction_postprocessing OK")
+
 
 if __name__=="__main__":
     unittest.main()

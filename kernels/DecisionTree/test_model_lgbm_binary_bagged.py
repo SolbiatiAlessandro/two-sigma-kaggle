@@ -107,7 +107,7 @@ class testcase(unittest.TestCase):
 
         print("shap OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_predict_rolling(self):
         historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
         y_test = self.target[-20:]
@@ -192,6 +192,18 @@ class testcase(unittest.TestCase):
         got = m.predict([self.market_train_df[-100:], None], verbose=True, do_shap=True)
 
         print(got.describe())
+
+    #@unittest.skip("wait")
+    def test_prediction_postprocessing(self):
+        m = model_lgbm_binary_bagged.model('example')
+        model1_predictions = np.full(100, 0.4)
+        model2_predictions = np.full(100, 0.6)
+        y_test = m._postprocess([model1_predictions, model2_predictions])
+        # test bagging 
+        self.assertEqual(y_test.shape, (100, ))
+        # test mapping
+        self.assertTrue(all(np.full(100, 0) == y_test))
+        print("test_prediction_postprocessing OK")
 
 
 if __name__=="__main__":

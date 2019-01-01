@@ -238,15 +238,13 @@ class model():
         """
         start_time = time()
         if verbose: print("Starting prediction for model {}, {}".format(self.name, ctime()))
-        if self.model1 is None:
+        if self.model1 is None or self.model2 is None:
             raise "Error: model is not trained!"
 
         X_test = self._generate_features(X[0], X[1], verbose=verbose)
         if verbose: print("X_test shape {}".format(X_test.shape))
-
-        y_test = (self.model1.predict(X_test) + self.model2.predict(X_test))/2
-        y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
-        y_test = y_test * 2 - 1
+        y_test_model1, y_test_model2 = self.model1.predict(X_test), self.model2.predict(X_test)
+        y_test = self._postprocess([y_test_model1, y_test_model2])
 
         if do_shap:
             #import pdb;pdb.set_trace()
@@ -270,13 +268,14 @@ class model():
         """
         start_time = time()
         if verbose: print("Starting rolled prediction for model {}, {}".format(self.name, ctime()))
+        if self.model1 is None or self.model2 is None:
+            raise "Error: model is not trained!"
 
         processed_historical_df = self._generate_features(historical_df[0], historical_df[1], verbose=verbose)
         X_test = processed_historical_df.iloc[-prediction_length:]
         if verbose: print("X_test shape {}".format(X_test.shape))
-        y_test = (self.model1.predict(X_test) + self.model2.predict(X_test))/2
-        y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
-        y_test = y_test * 2 - 1
+        y_test_model1, y_test_model2 = self.model1.predict(X_test), self.model2.predict(X_test)
+        y_test = self._postprocess([y_test_model1, y_test_model2])
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
@@ -308,3 +307,23 @@ class model():
             f=lgb.plot_importance(self.model1)
             f.figure.set_size_inches(10, 30) 
             plt.show()
+
+    def _postprocess(self, predictions):
+        """
+        post processing of predictions
+
+        Args:
+            predictions: list(np.array) might be from
+                different models
+        Return:
+            predictions: np.array
+
+        MODEL SPECIFIC:
+        the postprocessing is needed to ensemble bagged
+        models and to map prediction interval from [0, 1] 
+        to [-1, 1]
+        """
+        y_test = (predictions[0] + predictions[1])/2
+        y_test = y_test * 2 - 1
+        return y_test
+
