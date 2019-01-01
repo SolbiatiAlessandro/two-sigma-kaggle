@@ -104,10 +104,10 @@
 		<td>STANDARD MODEL, random validation, regression l1</td>
 	</tr>
 	<tr>
-		<td>12</td>
+		<td>13</td>
 		<td>model_lgbm_binary_bagged_random_validation</td>
-		<td>0.425525</td>
-		<td>0.641765</td>
+		<td>(lloss)0.425525</td>
+		<td>(lloss)0.641765</td>
 		<td>0.62817</td>
 		<td>STANDARD MODEL, random validation, binary_classification</td>
 	</tr>
@@ -126,7 +126,7 @@
 	<ul><b>[10]</b>: strange result, got a 0.1 increase in leatherboard (0.67) thanks to changing cross validation from split to random, need to check different distribution of prediction between the twos</ul>
 	<ul><b>[11]</b>: first STANDARD MODEL submission working properly, the model is written from scratch by me using split validation, [36] short-term lagged features on returns + weekday, regression l1 and params1 from eda 67. Training looks pretty healthy, stopped at 13th iteration. Most important feats: lag_14_openRaw10_max, volume, and lag_14_openRaw10_min. <img src="trainings/model_lgbm_baseline.png"></ul>
 	<ul><b>[12]</b>:identical model as above, just changed test train validation split. Some strange things happened. (1) Score same as before (didnt change likein 10) (2) trained for over 210 periods and didnt meet early stopping, will attach train later. Is this overfitting? <img src="trainings/model_lgbm_random_validation.png"></ul>
-	<ul><b>[13]</b>:this should be a replica of eda 067 but it gets only 063, not clear why. The training is with binary logloss and goes on for more then 100 epocs and looks pretty healthy, tried with clipping or not clipping score doesnt change.<img src="trainings/model_lgbm_binary_bagged_random_validation.py.png"></ul>
+	<ul><b>[13]</b>:this should be a replica of eda 067 but it gets only 063, not clear why. The training is with binary logloss and goes on for more then 100 epocs and looks pretty healthy, tried with clipping or not clipping score doesnt change.<img src="trainings/model_lgbm_binary_bagged_random_validation.png"></ul>
 
 </li>
 </li>
