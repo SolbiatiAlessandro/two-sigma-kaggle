@@ -5,6 +5,7 @@ run with Python 3.x
 from time import time, ctime
 import lightgbm as lgb
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime
 import shap
@@ -141,6 +142,13 @@ class model():
         X = self._generate_features(X[0], X[1], verbose=verbose)
         Y = Y.clip(Y.quantile(0.001), Y.quantile(0.999))
         binary_labels = Y >= 0
+
+        # here there is a transformation of input features
+        import pdb;pdb.set_trace()
+        mins = np.min(X, axis=0)
+        maxs = np.max(X, axis=0)
+        rng = maxs - mins
+        X = 1 - ((maxs - X) / rng)
 
         from sklearn import model_selection
         X_train, X_val, Y_train, Y_val, universe_train, universe_val, time_train, time_val, binary_labels_train, binary_labels_val = model_selection.train_test_split(X, Y, X['universe'], time_reference, binary_labels, test_size=0.25, random_state=99)
