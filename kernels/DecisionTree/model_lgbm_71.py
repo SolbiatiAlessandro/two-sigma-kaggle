@@ -150,6 +150,9 @@ class model():
         return_features = ['returnsClosePrevMktres10','returnsClosePrevRaw10','open','close']
         n_lag = [3,7,14]
         new_df = generate_lag_features(complete_features,n_lag=n_lag)
+        import pdb;pdb.set_trace()
+        new_df['time'] = pd.to_datetime(new_df['time'])
+        complete_features['time'] = pd.to_datetime(complete_features['time'])
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
         self.max_lag = max(n_lag)
 
@@ -254,11 +257,15 @@ class model():
         # train parameters prearation
         train_cols = X.columns.tolist()
         assert 'returnsOpenNextMktres10' not in train_cols 
-        lgb_train = lgb.Dataset(X.values, binary_Y, feature_name=train_cols)
-        lgb_val = lgb.Dataset(X_val.values, binary_Y_val, feature_name=train_cols)
+        train_data = lgb.Dataset(X.values, binary_Y, feature_name=train_cols)
+        test_data = lgb.Dataset(X_val.values, binary_Y_val, feature_name=train_cols)
 
         x_1 = [0.19000424246380565, 2452, 212, 328, 202]
         x_2 = [0.19016805202090095, 2583, 213, 312, 220]
+        x_3 = [0.19564034613157152, 2452, 210, 160, 219]
+        x_4 = [0.19016805202090095, 2500, 213, 150, 202]
+        x_5 = [0.19000424246380565, 2600, 215, 140, 220]
+        x_6 = [0.19000424246380565, 2652, 216, 152, 202]
 
         params_1 = {
                 'task': 'train',
@@ -284,23 +291,107 @@ class model():
                 'verbose': 1
             }
 
+
+        params_3 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',
+                'objective': 'binary',
+                'learning_rate': x_3[0],
+                'num_leaves': x_3[1],
+                'min_data_in_leaf': x_3[2],
+                'num_iteration': x_3[3],
+                'max_bin': x_3[4],
+                'verbose': 1
+            }
+
+        params_4 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',
+                'objective': 'binary',
+                'learning_rate': x_4[0],
+                'num_leaves': x_4[1],
+                'min_data_in_leaf': x_4[2],
+                'num_iteration': x_4[3],
+                'max_bin': x_4[4],
+                'verbose': 1
+            }
+
+        params_5 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',#dart
+                'objective': 'binary',
+                'learning_rate': x_5[0],
+                'num_leaves': x_5[1],
+                'min_data_in_leaf': x_5[2],
+                'num_iteration': x_5[3],
+                'max_bin': x_5[4],
+                'verbose': 1
+            }
+
+        params_6 = {
+                'task': 'train',
+                'boosting_type': 'gbdt',
+                'objective': 'binary',
+                'learning_rate': x_6[0],
+                'num_leaves': x_6[1],
+                'min_data_in_leaf': x_6[2],
+                'num_iteration': x_6[3],
+                'max_bin': x_6[4],
+                'verbose': 1
+            }
+
         training_results = {}
         self.model1 = lgb.train(params_1,
-                lgb_train,
+                train_data,
                 num_boost_round=100,
-                valid_sets=lgb_val,
+                valid_sets=(test_data, train_data),
+                valid_names=('valid','train'),
                 early_stopping_rounds=5,
                 verbose_eval=1,
                 evals_result=training_results)
 
         self.model2 = lgb.train(params_2,
-                lgb_train,
-                valid_sets=lgb_val,
+                train_data,
+                valid_sets=(test_data, train_data),
                 valid_names=('valid','train'),
                 num_boost_round=100,
                 verbose_eval=1,
                 early_stopping_rounds=5,
                 evals_result=training_results)
+
+
+        self.model3 = lgb.train(params_3,
+                train_data,
+                num_boost_round=100,
+                valid_sets=test_data,
+                early_stopping_rounds=5,
+        #         fobj=exp_loss,
+                )
+
+        self.model4 = lgb.train(params_4,
+                train_data,
+                num_boost_round=100,
+                valid_sets=test_data,
+                early_stopping_rounds=5,
+        #         fobj=exp_loss,
+                )
+
+        self.model5 = lgb.train(params_5,
+                train_data,
+                num_boost_round=100,
+                valid_sets=test_data,
+                early_stopping_rounds=5,
+        #         fobj=exp_loss,
+                )
+
+
+        self.model6 = lgb.train(params_6,
+                train_data,
+                num_boost_round=100,
+                valid_sets=test_data,
+                early_stopping_rounds=10,
+        #         fobj=exp_loss,
+                )
 
         del X, X_train, X_val
 
@@ -326,8 +417,12 @@ class model():
 
         X_test = self._generate_features(X[0], X[1], verbose=verbose)
         if verbose: print("X_test shape {}".format(X_test.shape))
-        y_test_model1, y_test_model2 = self.model1.predict(X_test), self.model2.predict(X_test)
-        y_test = self._postprocess([y_test_model1, y_test_model2])
+        preds= [self.model1.predict(X_test), self.model2.predict(X_test)]
+        preds.append(self.model3.predict(X_test))
+        preds.append(self.model4.predict(X_test))
+        preds.append(self.model5.predict(X_test))
+        preds.append(self.model6.predict(X_test))
+        y_test = self._postprocess(preds)
 
         if do_shap:
             #import pdb;pdb.set_trace()
@@ -357,8 +452,12 @@ class model():
         processed_historical_df = self._generate_features(historical_df[0], historical_df[1], verbose=verbose)
         X_test = processed_historical_df.iloc[-prediction_length:]
         if verbose: print("X_test shape {}".format(X_test.shape))
-        y_test_model1, y_test_model2 = self.model1.predict(X_test), self.model2.predict(X_test)
-        y_test = self._postprocess([y_test_model1, y_test_model2])
+        preds= [self.model1.predict(X_test), self.model2.predict(X_test)]
+        preds.append(self.model3.predict(X_test))
+        preds.append(self.model4.predict(X_test))
+        preds.append(self.model5.predict(X_test))
+        preds.append(self.model6.predict(X_test))
+        y_test = self._postprocess(preds)
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
@@ -406,7 +505,7 @@ class model():
         models and to map prediction interval from [0, 1] 
         to [-1, 1]
         """
-        y_test = (predictions[0] + predictions[1])/2
+        y_test = sum(predictions)/len(predictions)
         y_test = (y_test-y_test.min())/(y_test.max()-y_test.min())
         y_test = y_test * 2 - 1
         return y_test

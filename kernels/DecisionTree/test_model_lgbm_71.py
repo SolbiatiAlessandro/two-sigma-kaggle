@@ -8,6 +8,7 @@ class testcase(unittest.TestCase):
 
     def setUp(self):
         self.market_train_df = pd.read_csv("../data/market_train_df_head.csv").drop('Unnamed: 0', axis=1)
+        self.market_train_df['time'] = pd.to_datetime(self.market_train_df['time'])
         self.news_train_df = pd.read_csv("../data/news_train_df_head.csv").drop('Unnamed: 0', axis=1)
         
         self.market_cols = list(self.market_train_df.columns)
@@ -138,12 +139,11 @@ class testcase(unittest.TestCase):
 
     #@unittest.skip("for later")
     def test_predict_rolling(self):
-        historical_df  = [self.market_train_df.iloc[-40:], self.news_train_df[-40:]]
-        y_test = self.target[-20:]
+        historical_df  = [self.market_train_df.iloc[-10000:], self.news_train_df[-10000:]]
+        y_test = self.target[-1000:]
         
         m = model_lgbm_71.model('example')
         m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
-
         got = m.predict_rolling(historical_df, len(y_test), verbose=True)
 
         #sanity check on prediction sizes

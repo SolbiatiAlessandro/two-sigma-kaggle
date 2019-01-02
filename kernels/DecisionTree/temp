@@ -1,41 +1,32 @@
-from multiprocessing import Pool
+self.model3 = lgb.train(params_3,
+        train_data,
+        num_boost_round=100,
+        valid_sets=test_data,
+        early_stopping_rounds=5,
+#         fobj=exp_loss,
+        )
 
-def create_lag(df_code,n_lag=[3,7,14,],shift_size=1):
-    code = df_code['assetCode'].unique()
-    
-    for col in return_features:
-        for window in n_lag:
-            rolled = df_code[col].shift(shift_size).rolling(window=window)
-            lag_mean = rolled.mean()
-            lag_max = rolled.max()
-            lag_min = rolled.min()
-            lag_std = rolled.std()
-            df_code['%s_lag_%s_mean'%(col,window)] = lag_mean
-            df_code['%s_lag_%s_max'%(col,window)] = lag_max
-            df_code['%s_lag_%s_min'%(col,window)] = lag_min
-#             df_code['%s_lag_%s_std'%(col,window)] = lag_std
-    return df_code.fillna(-1)
+gbm_4 = lgb.train(params_4,
+        train_data,
+        num_boost_round=100,
+        valid_sets=test_data,
+        early_stopping_rounds=5,
+#         fobj=exp_loss,
+        )
 
-def generate_lag_features(df,n_lag = [3,7,14]):
-    features = ['time', 'assetCode', 'assetName', 'volume', 'close', 'open',
-       'returnsClosePrevRaw1', 'returnsOpenPrevRaw1',
-       'returnsClosePrevMktres1', 'returnsOpenPrevMktres1',
-       'returnsClosePrevRaw10', 'returnsOpenPrevRaw10',
-       'returnsClosePrevMktres10', 'returnsOpenPrevMktres10',
-       'returnsOpenNextMktres10', 'universe']
-    
-    assetCodes = df['assetCode'].unique()
-    print(assetCodes)
-    all_df = []
-    df_codes = df.groupby('assetCode')
-    df_codes = [df_code[1][['time','assetCode']+return_features] for df_code in df_codes]
-    print('total %s df'%len(df_codes))
-    
-    pool = Pool(4)
-    all_df = pool.map(create_lag, df_codes)
-    
-    new_df = pd.concat(all_df)  
-    new_df.drop(return_features,axis=1,inplace=True)
-    pool.close()
-    
-    return new_df
+gbm_5 = lgb.train(params_5,
+        train_data,
+        num_boost_round=100,
+        valid_sets=test_data,
+        early_stopping_rounds=5,
+#         fobj=exp_loss,
+        )
+
+
+gbm_6 = lgb.train(params_6,
+        train_data,
+        num_boost_round=100,
+        valid_sets=test_data,
+        early_stopping_rounds=10,
+#         fobj=exp_loss,
+        )
