@@ -68,7 +68,7 @@ class model():
         return market_data
         
 
-    def _generate_features(self, market_data, news_data, verbose=False, normalize=True):
+    def _generate_features(self, market_data, news_data, verbose=False, normalize=[1, 1]):
         """
         GENERAL:
         given the original market_data and news_data
@@ -87,8 +87,8 @@ class model():
 
         Args:
             [market_train_df, news_train_df]: pandas.DataFrame
-            normalize: should be True, but for testing we need to
-                 be able to toggle to check real values
+            normalize: if [1, 1] means normalize with local maxima minima, if [None, None] means not normalize, else normalize with [max, min]
+
         Returns:
             complete_features: pandas.DataFrame
         """
@@ -187,11 +187,17 @@ class model():
 
         #### normalization of input ####
 
-        if normalize:
+        if normalize == [1, 1]:
             mins = np.min(complete_features, axis=0)
             maxs = np.max(complete_features, axis=0)
             rng = maxs - mins
             complete_features = 1 - ((maxs - complete_features) / rng)
+        elif normalize != [None, None]:
+            mins = normalize[1]
+            maxs = normalize[0]
+            rng = maxs - mins
+            complete_features = 1 - ((maxs - complete_features) / rng)
+
 
         if verbose: print("Finished features generation for model {}, TIME {}".format(self.name, time()-start_time))
         return complete_features
@@ -407,9 +413,9 @@ class model():
         self.training_results = training_results
         return training_results 
 
-    def predict(self, X, verbose=False, do_shap=False):
+    def predict(self, X, verbose=False, do_shap=False, normalize=[None, None]):
         """
-        given a block of X features gives prediction for everyrow
+        given a block of X features gives prediction for everyrow+".pkl"
 
         Args:
             X: [market_train_df, news_train_df]
@@ -422,7 +428,7 @@ class model():
         if self.model1 is None or self.model2 is None:
             raise "Error: model is not trained!"
 
-        X_test = self._generate_features(X[0], X[1], verbose=verbose)
+        X_test = self._generate_features(X[0], X[1], verbose=verbose, normalize=normalize)
         if verbose: print("X_test shape {}".format(X_test.shape))
         preds= [self.model1.predict(X_test), self.model2.predict(X_test)]
         preds.append(self.model3.predict(X_test))
@@ -554,7 +560,7 @@ class model():
         """
         load models to memory from pickle/self.name
         """
-        save_name = os.path.join("../pickle",self.name)
+        save_name = os.path.join("../pickle",self.name)+".pkl"
         with open(save_name,"rb") as f:
             models = pk.load(f)
         self.model1 = models[0]
