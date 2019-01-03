@@ -6,11 +6,13 @@ from time import time, ctime
 import lightgbm as lgb
 import pandas as pd
 import numpy as np
+import pickle as pk
 from matplotlib import pyplot as plt
 from pathos.multiprocessing import ProcessingPool as Pool
 from datetime import datetime, date
 import shap
 import sys
+import os
 
 
 def sigma_score(preds, valid_data):
@@ -43,7 +45,12 @@ class model():
     def __init__(self, name):
         self.name             = name
         self.type             = lgb.Booster
-        self.model1, self.model2 = None, None
+        self.model1 = None
+        self.model2 = None
+        self.model3 = None
+        self.model4 = None
+        self.model5 = None
+        self.model6 = None
         self.training_results = None
         print("\ninit model {}".format(self.name))
         sys.path.insert(0, '../') # this is for imports from /kernels
@@ -150,7 +157,6 @@ class model():
         return_features = ['returnsClosePrevMktres10','returnsClosePrevRaw10','open','close']
         n_lag = [3,7,14]
         new_df = generate_lag_features(complete_features,n_lag=n_lag)
-        import pdb;pdb.set_trace()
         new_df['time'] = pd.to_datetime(new_df['time'])
         complete_features['time'] = pd.to_datetime(complete_features['time'])
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
@@ -397,6 +403,7 @@ class model():
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
 
+        self._save()
         self.training_results = training_results
         return training_results 
 
@@ -528,4 +535,33 @@ class model():
             else:
                     pass
         return data
+
+    def _save(self):
+        """
+        save models to memory into pickle/self.name
+        """
+        to_save = [self.model1, self.model2, self.model3, self.model4, self.model5, self.model6]
+        if not all(to_save):
+            print("[_save] Error: not all models are trained")
+            print(to_save)
+        else:
+            save_name = os.path.join("../pickle",self.name+"_")
+            with open(save_name,"wb") as f:
+                pk.dump(to_save, f)
+                print("[_save] saved models to "+save_name)
+
+    def _load(self):
+        """
+        load models to memory from pickle/self.name
+        """
+        save_name = os.path.join("../pickle",self.name)
+        with open(save_name,"rb") as f:
+            models = pk.load(f)
+        self.model1 = models[0]
+        self.model2 = models[1]
+        self.model3 = models[2]
+        self.model4 = models[3]
+        self.model5 = models[4]
+        self.model6 = models[5]
+        print("[_load] models loaded succesfully")
 

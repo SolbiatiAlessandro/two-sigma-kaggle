@@ -16,6 +16,7 @@ class testcase(unittest.TestCase):
 
         self.target = self.market_train_df['returnsOpenNextMktres10']
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
+        self.market_train_df['time'] = pd.to_datetime(self.market_train_df['time'])
 
     @unittest.skip("wait")
     def test_generate_features(self):
@@ -137,7 +138,7 @@ class testcase(unittest.TestCase):
 
         print("shap OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_predict_rolling(self):
         historical_df  = [self.market_train_df.iloc[-10000:], self.news_train_df[-10000:]]
         y_test = self.target[-1000:]
@@ -243,7 +244,28 @@ class testcase(unittest.TestCase):
         m._clean_data(pd.DataFrame(dirty_array))
         self.assertEqual(dirty_array[4], 5.0)
 
+    #@unittest.skip("wait")
+    def test_save_load(self):
+        m = model_lgbm_71.model('example')
+        m.name = "save_test"
+        m.model1 = 7
+        m.model2 = 1
+        m.model3 = 2
+        m.model4 = 3
+        m.model5 = 4
+        m.model6 = 5
+        m._save()
 
+        n = model_lgbm_71.model('example')
+        n.name = "save_test"
+        n._load()
+        self.assertEqual(n.model1,  7)
+        self.assertEqual(n.model2,  1)
+        self.assertEqual(n.model3,  2)
+        self.assertEqual(n.model4,  3)
+        self.assertEqual(n.model5,  4)
+        self.assertEqual(n.model6,  5)
+        
 
 if __name__=="__main__":
     unittest.main()

@@ -41,8 +41,6 @@ def main():
 
         print("Preparing train data..")
         market_train_df = pd.read_csv("data/market_train_df.csv").drop('Unnamed: 0', axis=1)
-        train_target = market_train_df['returnsOpenNextMktres10']
-        market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
 
         for i, model in enumerate(models):
             if os.path.isfile("predictions/"+paths[i]):
@@ -52,6 +50,9 @@ def main():
                 if got == "y":
                     continue
             _model = model(paths[i])
+            market_train_df = _model._preprocess(market_train_df)
+            train_target = market_train_df['returnsOpenNextMktres10']
+            market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
             _model.train([market_train_df, None], train_target, verbose=True)
             model_predictions = _model.predict([market_test_df, None])
             print("Generated prediction files for "+paths[i])
