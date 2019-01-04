@@ -282,7 +282,7 @@ class model():
         # train parameters prearation
         train_cols = X.columns.tolist()
         assert 'returnsOpenNextMktres10' not in train_cols 
-        train_data = lgb.Dataset(X.values, binary_Y, feature_name=train_cols)
+        train_data = lgb.Dataset(X_train.values, binary_Y_train, feature_name=train_cols)
         test_data = lgb.Dataset(X_val.values, binary_Y_val, feature_name=train_cols)
 
         x_1 = [0.19000424246380565, 2452, 212, 328, 202]

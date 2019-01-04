@@ -49,6 +49,7 @@ def main():
                 got = input()
                 if got == "y":
                     continue
+            import pdb;pdb.set_trace()
             _model = model(paths[i])
             market_train_df = _model._preprocess(market_train_df)
             train_target = market_train_df['returnsOpenNextMktres10']
