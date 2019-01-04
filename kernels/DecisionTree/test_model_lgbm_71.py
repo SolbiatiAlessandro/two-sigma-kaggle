@@ -105,6 +105,10 @@ class testcase(unittest.TestCase):
 
     #@unittest.skip("for later")
     def test_generate_features_labels(self):
+        """
+        passing on commit a7e691214
+        TODO: check if with previous version would break
+        """
         m = model_lgbm_71.model('example')
         market_test_df = self.market_train_df
 

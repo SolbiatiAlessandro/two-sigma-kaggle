@@ -54,7 +54,10 @@ def main():
             train_target = market_train_df['returnsOpenNextMktres10']
             market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
             _model.train([market_train_df, None], train_target, verbose=True)
-            model_predictions = _model.predict([market_test_df, None])
+            model_predictions = _model.predict([market_test_df, None],
+                    verbose=True,
+                    normalize=True,
+                    normalize_vals=[_model.maxs, _model.mins])
             print("Generated prediction files for "+paths[i])
 
             pk.dump(model_predictions, open("predictions/"+paths[i], "wb"))
