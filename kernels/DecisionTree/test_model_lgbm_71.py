@@ -18,7 +18,7 @@ class testcase(unittest.TestCase):
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
         self.market_train_df['time'] = pd.to_datetime(self.market_train_df['time'])
 
-    #@unittest.skip("wait")
+    @unittest.skip("wait")
     def test_generate_features(self):
         """
         this is one of the most important tests,
@@ -103,9 +103,36 @@ class testcase(unittest.TestCase):
         # solving the normalization bug mentioned in commit 2af2ac5 
         # complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True, normalize=True)
 
-    @unittest.skip("for later")
+    #@unittest.skip("for later")
     def test_generate_features_labels(self):
-        pass
+        m = model_lgbm_71.model('example')
+        market_test_df = self.market_train_df
+
+        day40 = market_test_df['time'].unique()[40]
+        x_train = market_test_df[market_test_df['time'] <= day40]
+        #the model would be trained with this features
+        train_features = m._generate_features(x_train, None, verbose=True, normalize=False)
+
+        day44 = market_test_df['time'].unique()[44]
+        x_test = market_test_df[market_test_df['time'] == day44]
+        #the model would predict with this features
+        test_features = m._generate_features(x_test, None, verbose=True, normalize=False)
+
+        #asset code mapping in training dataset
+        train_mapping_df = pd.DataFrame({'assetCode':x_train['assetCode'].reset_index(drop=True),'mappedTo':train_features['assetCodeT']})
+
+        #asset code mapping in prediction dataset
+        test_mapping_df = pd.DataFrame({'assetCode':x_test['assetCode'].reset_index(drop=True),'mappedTo':test_features['assetCodeT']})
+
+        for i, code in enumerate(list(test_mapping_df['assetCode'])):
+            if i % 300 == 0: print("testing mapping for code "+str(code))
+            test_map_value = test_mapping_df[test_mapping_df['assetCode'] == code]['mappedTo'].iloc[0]
+            train_map_values = list(train_mapping_df[train_mapping_df['assetCode'] == code]['mappedTo'])
+
+            # a unique asset (code) should be mapped to same value
+            # in test and train dataset
+            for train_map_value in train_map_values:
+                self.assertEqual(test_map_value, train_map_value)
 
     @unittest.skip("for later")
     def test_train(self):
