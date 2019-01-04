@@ -138,19 +138,57 @@ class testcase(unittest.TestCase):
 
         print("shap OK")
 
-    @unittest.skip("for later")
+    #@unittest.skip("for later")
     def test_predict_rolling(self):
-        historical_df  = [self.market_train_df.iloc[-10000:], self.news_train_df[-10000:]]
-        y_test = self.target[-1000:]
-        
-        m = model_lgbm_71.model('example')
-        m.train([self.market_train_df, self.news_train_df], self.target, verbose=True)
-        got = m.predict_rolling(historical_df, len(y_test), verbose=True)
+        import pickle as pk
+        with open("pickle/rolling_predictions_dataset.pkl","rb") as f:
+            days = pk.load(f)
+        mins,maxs,rng = pk.load(open("pickle/normalizing.pkl","rb"))
+        model = model_lgbm_71.model('DecisionTree.model_lgbm_71')
+        model._load()
 
-        #sanity check on prediction sizes
-        self.assertTrue(len(got) > 0)
-        self.assertEqual(len(y_test), len(got))
-        print("rolling predictions test OK")
+        PREDICTIONS = pk.load(open("pickle/_ref_rolling_predictions.pkl","rb"))
+
+        # the following is simulation code from submission kernel
+
+        import time
+        _COMPARE_PREDICTIONS = []
+        n_days = 0
+        prep_time = 0
+        prediction_time = 0
+        n_lag=[3,7,14]
+        packaging_time = 0
+        total_market_obs_df = []
+        for (market_obs_df, news_obs_df, predictions_template_df) in days[:2]:
+            n_days +=1
+            if (n_days%50==0):
+                pass
+                #print(n_days,end=' ')
+            t = time.time()
+            #market_obs_df['time'] = market_obs_df['time'].dt.date
+
+            total_market_obs_df.append(market_obs_df)
+            if len(total_market_obs_df)==1:
+                history_df = total_market_obs_df[0]
+            else:
+                history_df = pd.concat(total_market_obs_df[-(np.max(n_lag)+1):])
+                
+            
+            confidence = model.predict_rolling([history_df, None], market_obs_df, verbose=True, normalize=True, normalize_vals = [maxs,mins])      
+               
+            preds = pd.DataFrame({'assetCode':market_obs_df['assetCode'],'confidence':confidence})
+            predictions_template_df = predictions_template_df.merge(preds,how='left').drop('confidenceValue',axis=1).fillna(0).rename(columns={'confidence':'confidenceValue'})
+            _COMPARE_PREDICTIONS.append(predictions_template_df)
+
+        for i, ref in enumerate(_COMPARE_PREDICTIONS):
+            df = pd.DataFrame({'assetCode':PREDICTIONS[i]['assetCode'],'ref':PREDICTIONS[i]['confidenceValue'],'compare':_COMPARE_PREDICTIONS[i]['confidenceValue']})
+            try:
+                self.assertTrue(all(df.iloc[:,1] == df.iloc[:,2]))
+            except:
+                print("AssertionError: rolling predictions not correct")
+                import pdb;pdb.set_trace()
+                pass
+
     
     @unittest.skip("for later")
     def test_lagged_eatures(self):
@@ -244,7 +282,7 @@ class testcase(unittest.TestCase):
         m._clean_data(pd.DataFrame(dirty_array))
         self.assertEqual(dirty_array[4], 5.0)
 
-    #@unittest.skip("wait")
+    @unittest.skip("wait")
     def test_save_load(self):
         m = model_lgbm_71.model('example')
         m.name = "save_test"

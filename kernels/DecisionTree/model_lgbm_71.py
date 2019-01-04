@@ -68,7 +68,7 @@ class model():
         return market_data
         
 
-    def _generate_features(self, market_data, news_data, verbose=False, normalize=[1, 1]):
+    def _generate_features(self, market_data, news_data, verbose=False, normalize=True, normalize_vals=[None], output_len = None):
         """
         GENERAL:
         given the original market_data and news_data
@@ -87,7 +87,9 @@ class model():
 
         Args:
             [market_train_df, news_train_df]: pandas.DataFrame
-            normalize: if [1, 1] means normalize with local maxima minima, if [None, None] means not normalize, else normalize with [max, min]
+            normalize: (bool) 
+            normalize_vals: None or [maxs, mins], normalize with local vals or with given vals
+            unique_assetCodess: list(str),for mapping assetCodeT
 
         Returns:
             complete_features: pandas.DataFrame
@@ -162,20 +164,30 @@ class model():
         complete_features = pd.merge(complete_features,new_df,how='left',on=['time','assetCode'])
         self.max_lag = max(n_lag)
 
+        if output_len is not None:
+            complete_features = complete_features[-output_len:]
+
         complete_features = self._clean_data(complete_features)
 
         #### [1]  generate labels encoding for assetCode ####
 
-        def data_prep(market_train):
+        def data_prep(market_train, unique_assetCodes):
             """procedure from https://www.kaggle.com/guowenrui/sigma-eda-versionnew
+            Args:
+                market_train: df
+                unique_assetCodes: market_train['assetCode'].unique() this should be standard map!
             """
-            lbl = {k: v for v, k in enumerate(market_train['assetCode'].unique())}
-            market_train['assetCodeT'] = market_train['assetCode'].map(lbl)
+            lbl = {k: v for v, k in enumerate(unique_assetCodes)}
+            market_train['assetCodeT'] = market_train['assetCode'].map(lbl) # this might get an error because mapping doesn't exist (read below)
+
+            # so the mapping has a bug, I should always use the same map and not every time a different map
+            # I might get assetCode not in the map, in that case need to handle exception putting (len + 1) as mapping value
+
+
             market_train = market_train.dropna(axis=0)
             return market_train
 
-        complete_features = data_prep(complete_features)
-
+        complete_features = data_prep(complete_features, complete_features['assetCode'].unique())
 
         #### drop columns ####
 
@@ -187,16 +199,19 @@ class model():
 
         #### normalization of input ####
 
-        if normalize == [1, 1]:
-            mins = np.min(complete_features, axis=0)
-            maxs = np.max(complete_features, axis=0)
-            rng = maxs - mins
-            complete_features = 1 - ((maxs - complete_features) / rng)
-        elif normalize != [None, None]:
-            mins = normalize[1]
-            maxs = normalize[0]
-            rng = maxs - mins
-            complete_features = 1 - ((maxs - complete_features) / rng)
+        if normalize:
+            if len(normalize_vals) == 1:
+                mins = np.min(complete_features, axis=0)
+                maxs = np.max(complete_features, axis=0)
+                self.mins = mins #saved for prediction phase
+                self.maxs = maxs #saved for prediction phase
+                rng = maxs - mins
+                complete_features = 1 - ((maxs - complete_features) / rng)
+            else:
+                mins = normalize_vals[1]
+                maxs = normalize_vals[0]
+                rng = maxs - mins
+                complete_features = 1 - ((maxs - complete_features) / rng)
 
 
         if verbose: print("Finished features generation for model {}, TIME {}".format(self.name, time()-start_time))
@@ -211,7 +226,7 @@ class model():
         binary_labels = Y >= 0
         return binary_labels.astype(int).values, Y.values
 
-    def train(self, X, Y, verbose=False):
+    def train(self, X, Y, verbose=False, normalize=True, normalize_vals=[None]):
         """
         GENERAL:
         basic method to train a model with given data
@@ -238,7 +253,7 @@ class model():
         time_reference = X[0]['time'] #time is dropped in preprocessing, but is needed later for metrics eval
         universe_reference = X[0]['universe']
 
-        X = self._generate_features(X[0], X[1], verbose=verbose)
+        X = self._generate_features(X[0], X[1], verbose=verbose, normalize=normalize, normalize_vals=normalize_vals)
         binary_Y, Y = self._generate_target(Y)
 
         try:
@@ -413,13 +428,15 @@ class model():
         self.training_results = training_results
         return training_results 
 
-    def predict(self, X, verbose=False, do_shap=False, normalize=[None, None]):
+    def predict(self, X, verbose=False, do_shap=False, normalize=True, normalize_vals = [None]):
         """
         given a block of X features gives prediction for everyrow+".pkl"
 
         Args:
             X: [market_train_df, news_train_df]
             shap: perform shap analysis
+            normalize: (bool)
+            normalize_vals: recommmended self.maxs, self.mins
         Returns:
             y: pandas.Series
         """
@@ -428,7 +445,7 @@ class model():
         if self.model1 is None or self.model2 is None:
             raise "Error: model is not trained!"
 
-        X_test = self._generate_features(X[0], X[1], verbose=verbose, normalize=normalize)
+        X_test = self._generate_features(X[0], X[1], verbose=verbose, normalize=normalize, normalize_vals=normalize_vals)
         if verbose: print("X_test shape {}".format(X_test.shape))
         preds= [self.model1.predict(X_test), self.model2.predict(X_test)]
         preds.append(self.model3.predict(X_test))
@@ -448,24 +465,27 @@ class model():
         if verbose: print("Finished prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
 
-    def predict_rolling(self, historical_df, prediction_length, verbose=False):
+    def predict_rolling(self, historical_df, market_obs_df, verbose=False, normalize=True, normalize_vals=[None]):
         """
         predict features from X, uses historical for (lagged) feature generation
         to be used with rolling prediciton structure from competition
 
         Args:
             historical_df: [market_train_df, news_train_df]
-            prediction_length: generate features on historical_df, predict only on the last rows
+            market_obs_df: from rolling prediction generator
         """
         start_time = time()
         if verbose: print("Starting rolled prediction for model {}, {}".format(self.name, ctime()))
         if self.model1 is None or self.model2 is None:
             raise "Error: model is not trained!"
 
-        processed_historical_df = self._generate_features(historical_df[0], historical_df[1], verbose=verbose)
-        X_test = processed_historical_df.iloc[-prediction_length:]
+        X_test = self._generate_features(historical_df[0], historical_df[1], verbose=verbose, normalize=normalize, normalize_vals=normalize_vals, output_len=len(market_obs_df))
+        X_test.reset_index(drop=True,inplace=True)
+        import pdb;pdb.set_trace()
         if verbose: print("X_test shape {}".format(X_test.shape))
-        preds= [self.model1.predict(X_test), self.model2.predict(X_test)]
+        preds= []
+        preds.append(self.model1.predict(X_test))
+        preds.append(self.model2.predict(X_test))
         preds.append(self.model3.predict(X_test))
         preds.append(self.model4.predict(X_test))
         preds.append(self.model5.predict(X_test))
@@ -538,6 +558,8 @@ class model():
                     data[i] = data[i].fillna("other")
             elif (data[i].dtype == "int64" or data[i].dtype == "float64"):
                     data[i] = data[i].fillna(data[i].mean())
+                    # I am just filling the mean of all stocks together?
+                    # should fill with the mean of the singular stock
             else:
                     pass
         return data
