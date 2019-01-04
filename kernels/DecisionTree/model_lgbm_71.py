@@ -52,6 +52,7 @@ class model():
         self.model5 = None
         self.model6 = None
         self.training_results = None
+        self.assetCode_mapping = None
         print("\ninit model {}".format(self.name))
         sys.path.insert(0, '../') # this is for imports from /kernels
 
@@ -165,29 +166,24 @@ class model():
         self.max_lag = max(n_lag)
 
         if output_len is not None:
+            # this is used during rolling predictions, where were
+            # we need only the last len(market_obs_df) rows
             complete_features = complete_features[-output_len:]
 
         complete_features = self._clean_data(complete_features)
 
         #### [1]  generate labels encoding for assetCode ####
 
-        def data_prep(market_train, unique_assetCodes):
-            """procedure from https://www.kaggle.com/guowenrui/sigma-eda-versionnew
-            Args:
-                market_train: df
-                unique_assetCodes: market_train['assetCode'].unique() this should be standard map!
-            """
-            lbl = {k: v for v, k in enumerate(unique_assetCodes)}
-            market_train['assetCodeT'] = market_train['assetCode'].map(lbl) # this might get an error because mapping doesn't exist (read below)
+        # this sets a universal mapping for assetCodes
+        # didn't verify it doesn't raise KeyError for new assetCodes
+        # not encountered during training phase
 
-            # so the mapping has a bug, I should always use the same map and not every time a different map
-            # I might get assetCode not in the map, in that case need to handle exception putting (len + 1) as mapping value
+        if self.assetCode_mapping is None:
+            self.assetCode_mapping = {asset_code: mapped_value\
+                    for mapped_value, asset_code in\
+                    enumerate(complete_features['assetCode'].unique())}
 
-
-            market_train = market_train.dropna(axis=0)
-            return market_train
-
-        complete_features = data_prep(complete_features, complete_features['assetCode'].unique())
+        complete_features['assetCodeT'] = complete_features['assetCode'].map(self.assetCode_mapping).dropna(axis = 0, inplace=True)
 
         #### drop columns ####
 
@@ -208,6 +204,8 @@ class model():
                 rng = maxs - mins
                 complete_features = 1 - ((maxs - complete_features) / rng)
             else:
+                # if method was called with arbitrary normalize values
+                # (because in prediction phase)
                 mins = normalize_vals[1]
                 maxs = normalize_vals[0]
                 rng = maxs - mins
@@ -424,7 +422,12 @@ class model():
 
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
 
-        self._save()
+
+        try:
+            self._save()
+        except:
+            print("[train] WARNING: couldn't save the model")
+
         self.training_results = training_results
         return training_results 
 
