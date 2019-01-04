@@ -18,7 +18,7 @@ class testcase(unittest.TestCase):
         self.market_train_df.drop(['returnsOpenNextMktres10'], axis=1)
         self.market_train_df['time'] = pd.to_datetime(self.market_train_df['time'])
 
-    @unittest.skip("wait")
+    #@unittest.skip("wait")
     def test_generate_features(self):
         """
         this is one of the most important tests,
@@ -85,8 +85,9 @@ class testcase(unittest.TestCase):
 
         #### TEST ON LABEL ENCODING ####
 
-        # ref sub-method data_prep() from eda 67
-
+        # NOTE: this test is extremely weak and doens't spot
+        # universal mapping bug mentioned in commit 4327f4
+        # additional testing on mapping is in test_generate_features_labels
         self.assertTrue('assetCodeT' in complete_features.columns)
         self.assertTrue(complete_features['assetCodeT'].dtype == int)
         self.assertEqual(
@@ -97,10 +98,14 @@ class testcase(unittest.TestCase):
 
         print("generate features test (label encoding) OK")
 
-        # don't really know how to test normalization of data
+        # NOTE: normalization is still not tested here
+        # it was tested empirically on notebook (not enough)
+        # solving the normalization bug mentioned in commit 2af2ac5 
         # complete_features = m._generate_features(self.market_train_df, self.news_train_df, verbose=True, normalize=True)
 
-    
+    @unittest.skip("for later")
+    def test_generate_features_labels(self):
+        pass
 
     @unittest.skip("for later")
     def test_train(self):
@@ -138,7 +143,7 @@ class testcase(unittest.TestCase):
 
         print("shap OK")
 
-    #@unittest.skip("for later")
+    @unittest.skip("for later")
     def test_predict_rolling(self):
         import pickle as pk
         with open("pickle/rolling_predictions_dataset.pkl","rb") as f:

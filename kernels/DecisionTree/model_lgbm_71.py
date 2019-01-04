@@ -183,7 +183,7 @@ class model():
                     for mapped_value, asset_code in\
                     enumerate(complete_features['assetCode'].unique())}
 
-        complete_features['assetCodeT'] = complete_features['assetCode'].map(self.assetCode_mapping).dropna(axis = 0, inplace=True)
+        complete_features['assetCodeT'] = complete_features['assetCode'].map(self.assetCode_mapping).dropna(axis = 0)
 
         #### drop columns ####
 
