@@ -245,14 +245,6 @@ class model():
         Returns:
             (optional) training_results
         """
-        try:
-            self._load()
-            print("####################\n[WARNING] TRAINING SKIPPED, MODEL LOADED FROM MEMORY\n#####################")
-            print("[INFO] if you want to avoid skipping training, change model name")
-            return
-        except:
-            print("Tried to load model but didn't find any")
-            pass
 
         start_time = time()
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
@@ -374,6 +366,15 @@ class model():
                 'verbose': 1
             }
 
+        try:
+            self._load()
+            print("####################\n[WARNING] TRAINING SKIPPED, MODEL LOADED FROM MEMORY\n#####################")
+            print("[INFO] if you want to avoid skipping training, change model name")
+            return
+        except:
+            print("Tried to load model but didn't find any")
+            pass
+
         training_results = {}
         self.model1 = lgb.train(params_1,
                 train_data,
@@ -493,7 +494,7 @@ class model():
 
         X_test = self._generate_features(historical_df[0], historical_df[1], verbose=verbose, normalize=normalize, normalize_vals=normalize_vals, output_len=len(market_obs_df))
         X_test.reset_index(drop=True,inplace=True)
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         if verbose: print("X_test shape {}".format(X_test.shape))
         preds= []
         preds.append(self.model1.predict(X_test))

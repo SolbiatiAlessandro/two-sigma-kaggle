@@ -52,7 +52,6 @@ def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=No
     max_values, min_values, max_lag = model.maxs, model.mins, model.max_lag # values used for normalization during predictions
     if inspect: model.inspect(None)
     
-    import pdb;pdb.set_trace()
     #prediction loop
     PREDICTIONS = []
     days = []
@@ -74,7 +73,10 @@ def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=No
         n_days +=1
         if (n_days%50==0): print(n_days,end=' ')
         t = time()
-        market_obs_df['time'] = market_obs_df['time'].dt.date
+        try:
+            market_obs_df['time'] = market_obs_df['time'].dt.date
+        except:
+            pass
 
         total_market_obs_df.append(market_obs_df)
         if len(total_market_obs_df) == 1:
