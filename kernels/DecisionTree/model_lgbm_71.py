@@ -245,6 +245,15 @@ class model():
         Returns:
             (optional) training_results
         """
+        try:
+            self._load()
+            print("####################\n[WARNING] TRAINING SKIPPED, MODEL LOADED FROM MEMORY\n#####################")
+            print("[INFO] if you want to avoid skipping training, change model name")
+            return
+        except:
+            print("Tried to load model but didn't find any")
+            pass
+
         start_time = time()
         if verbose: print("Starting training for model {}, {}".format(self.name, ctime()))
             
@@ -571,24 +580,39 @@ class model():
     def _save(self):
         """
         save models to memory into pickle/self.name
+
+        RaiseException: if can't save
         """
         to_save = [self.model1, self.model2, self.model3, self.model4, self.model5, self.model6]
         if not all(to_save):
             print("[_save] Error: not all models are trained")
             print(to_save)
         else:
-            save_name = os.path.join("../pickle",self.name+"_")
-            with open(save_name,"wb") as f:
-                pk.dump(to_save, f)
-                print("[_save] saved models to "+save_name)
+            try: #try to save in different folders based on where we are
+                save_name = os.path.join("../pickle",self.name+"_.pkl")
+                with open(save_name,"wb") as f:
+                    pk.dump(to_save, f)
+                    print("[_save] saved models to "+save_name)
+            except: 
+                save_name = os.path.join("pickle",self.name+"_.pkl")
+                with open(save_name,"wb") as f:
+                    pk.dump(to_save, f)
+                    print("[_save] saved models to "+save_name)
 
     def _load(self):
         """
         load models to memory from pickle/self.name
+
+        RaiseExcpetion: can't find model
         """
-        save_name = os.path.join("../pickle",self.name)+".pkl"
-        with open(save_name,"rb") as f:
-            models = pk.load(f)
+        save_name = os.path.join("../pickle",self.name)+"_.pkl"
+        save_name_attempt = os.path.join("pickle",self.name)+"_.pkl"
+        try:
+            with open(save_name,"rb") as f:
+                models = pk.load(f)
+        except:
+            with open(save_name_attempt,"rb") as f:
+                models = pk.load(f)
         self.model1 = models[0]
         self.model2 = models[1]
         self.model3 = models[2]

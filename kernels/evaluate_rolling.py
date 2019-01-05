@@ -1,11 +1,14 @@
-def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=None):
+def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=None, inspect=False):
     """
     simulate kernel rolling predictions to validatiate on private dataset
     Args:
         model: class model (from model_lgbm_71 import model)
         MODEL_NAME: 'lgbm_71_leak'
-        DATA_FOLDER = "../../data"
-        PREDICTIONS_FOLDER = "../../predictions"
+        DATA_FOLDER: "../../data"
+        PREDICTIONS_FOLDER: "../../predictions"
+        fold: None or (int) for different testing folds
+        inspect: bool, call model.inspect and print training
+         (will stop pipeline and wait for user prompt)
     
     save in PREDICTIONS_FOLDER+"rolling_"+MODEL_NAME a .pkl file with predictions
     """
@@ -47,8 +50,9 @@ def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=No
     market_train_df.drop('returnsOpenNextMktres10', axis=1, inplace=True)
     model.train([market_train_df, news_train_df], target, verbose=True)
     max_values, min_values, max_lag = model.maxs, model.mins, model.max_lag # values used for normalization during predictions
-    model.inspect(None)
+    if inspect: model.inspect(None)
     
+    import pdb;pdb.set_trace()
     #prediction loop
     PREDICTIONS = []
     days = []
@@ -96,5 +100,3 @@ if __name__ == "__main__":
     from DecisionTree.model_lgbm_71 import model
     model_name = "lgbm_71_leak_bechmark"
     evaluate_rolling(model, model_name, data_folder, predictions_folder)
-    
-
