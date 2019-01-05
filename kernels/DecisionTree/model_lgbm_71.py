@@ -445,10 +445,11 @@ class model():
         if verbose: print("Finished training for model {}, TIME {}".format(self.name, time()-start_time))
 
 
-        try:
-            self._save()
-        except:
-            print("[train] WARNING: couldn't save the model")
+        if load:
+            try:
+                self._save()
+            except:
+                print("[train] WARNING: couldn't save the model")
 
         self.training_results = training_results
         return training_results 

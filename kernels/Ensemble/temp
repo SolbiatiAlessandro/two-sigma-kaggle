@@ -1,0 +1,49 @@
+# Now fill `X_train_level2` with metafeatures
+from sklearn.metrics import r2_score
+for cur_block_num in range(level_2_range[0], level_2_range[1]):
+    print("#"*30)
+    print("[STACKING] starting block number "+str(cur_block_num))
+    print("#"*30)
+    
+    
+    '''
+    [from coursera]
+        1. Split `X_train` into parts
+           Remember, that corresponding dates are stored in `dates_train` 
+        2. Fit linear regression 
+        3. Fit LightGBM and put predictions          
+        4. Store predictions from 2. and 3. in the right place of `X_train_level2`. 
+           You can use `dates_train_level2` for it
+           Make sure the order of the meta-features is the same as in `X_test_level2`
+    '''      
+    cur_block_X = X_train_level1[X_train_level1['period'] < cur_block_num]
+    cur_block_Y = y_train_level1[X_train_level1['period'] < cur_block_num]
+    
+    cur_block_X_test = X_train_level1[X_train_level1['period'] == cur_block_num]
+    cur_block_Y_test = y_train_level1[X_train_level1['period'] == cur_block_num]
+    
+    # TODO:   there is NA in values
+    # UPDATE: this should be handled by ._generate_features
+    
+    # let's train here all the models
+    '''
+    MODEL 1
+    : linear regression
+    '''
+    block_model00, results = model_lr(cur_block_X.copy(), cur_block_Y.copy())
+    pred_lr = linear_regressor(block_model00, cur_block_X_test.copy())
+    print('Test r2 score for linreg in block %d is %f' % (cur_block_num, r2_score(cur_block_Y_test, pred_lr)))
+    
+    
+    '''
+    MODEL 2
+    lightLGB (lgb_0629)
+    using 'script 67' params
+    '''
+    block_model01, results = model_lgb_0629(cur_block_X.copy(), cur_block_Y.copy())
+    pred_lgb = lgb_0629(block_model01, cur_block_X_test.copy())
+    print('Test r2 score for lgb_0629 in block %d is %f' % (cur_block_num, r2_score(cur_block_Y_test, pred_lgb)))
+    
+    cur_block_X_train_level2 = np.c_[pred_lr, pred_lgb] 
+    
+    X_train_level2[periods_level2 == cur_block_num] = cur_block_X_train_level2
