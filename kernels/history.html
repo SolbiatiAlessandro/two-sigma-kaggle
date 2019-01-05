@@ -111,6 +111,22 @@
 		<td>0.62817</td>
 		<td>STANDARD MODEL, random validation, binary_classification</td>
 	</tr>
+	<tr>
+		<td>14</td>
+		<td>model_lgbm_71 (train-leak)</td>
+		<td>(lloss)0.419973</td>
+		<td>(lloss)0.419976</td>
+		<td>0.70471</td>
+		<td>[BENCHMARK] standardize model matching eda71 score</td>
+	</tr>
+	<tr>
+		<td>15</td>
+		<td>model_lgbm_71 (train-leak) (fix mapping)</td>
+		<td>(lloss)0.419973</td>
+		<td>(lloss)0.419976</td>
+		<td>0.66163</td>
+		<td>mapping bug fixed</td>
+	</tr>
 </table>
 <br>
 <li>
@@ -127,6 +143,8 @@
 	<ul><b>[11]</b>: first STANDARD MODEL submission working properly, the model is written from scratch by me using split validation, [36] short-term lagged features on returns + weekday, regression l1 and params1 from eda 67. Training looks pretty healthy, stopped at 13th iteration. Most important feats: lag_14_openRaw10_max, volume, and lag_14_openRaw10_min. <img src="trainings/model_lgbm_baseline.png"></ul>
 	<ul><b>[12]</b>:identical model as above, just changed test train validation split. Some strange things happened. (1) Score same as before (didnt change likein 10) (2) trained for over 210 periods and didnt meet early stopping, will attach train later. Is this overfitting? <img src="trainings/model_lgbm_random_validation.png"></ul>
 	<ul><b>[13]</b>:this should be a replica of eda 067 but it gets only 063, not clear why. The training is with binary logloss and goes on for more then 100 epocs and looks pretty healthy, tried with clipping or not clipping score doesnt change.<img src="trainings/model_lgbm_binary_bagged_random_validation.png"></ul>
+	<ul><b>[14]</b>[BENCHMARK] standardize model reaching eda71 scores on public. Observations: fixed all bugs in standard model, the scores matches perfectly. The main bugs where 1) normalization with training values 2) rolling predictios, check commits for more details. The model is still leaking (we are training with also validation data? super weird) just look at train validation score <img src="trainings/model_lgbm_71_train_leak.png"></ul>
+	<ul><b>[15]</b>So there is a huge bug that assets are mapped wrong (see commits for more details). This version is tested on the bug but perform worse, but on my local validation perform better. Need to 1) check if bugged version actually fails tests 2) on verified local validation also perform better. I am pretty sure this bug is wrong.</ul>
 
 </li>
 </li>
