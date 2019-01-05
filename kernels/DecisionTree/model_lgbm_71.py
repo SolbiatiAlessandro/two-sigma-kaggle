@@ -15,26 +15,22 @@ import sys
 import os
 
 
-def sigma_score(preds, valid_data):
-    """
-    this is a custom metric used to train the model_lgbm_baseline
-    """
-    df_time = valid_data.params['extra_time'] # will be injected afterwards
-    labels = valid_data.get_label()
-    
-    #    assert len(labels) == len(df_time)
-
-    x_t = preds * labels #  * df_valid['universe'] -> Here we take out the 'universe' term because we already keep only those equals to 1.
-    
-    # Here we take advantage of the fact that `labels` (used to calculate `x_t`)
-    # is a pd.Series and call `group_by`
-    x_t_sum = x_t.groupby(df_time).sum()
-    score = x_t_sum.mean() / x_t_sum.std()
-
-    return 'sigma_score', score, True
-
 class model():
-    """this is a baseline lightLGB model with simple features
+    """this is a bagged lightLGBM model as STANDARD BENCHMARK
+    it is the highest scoring STANDARD model (0.704) on public validation
+    at date of commit #2f9beb6, some of the features are
+
+    FEATURES:
+    - 6 bagged model tuned with hyperopt
+    - leaked training (check lgbm_71_no_leak for clean model)
+    - global assetMapping
+    - global standardization values
+    - _load and _save APIs
+
+    ISSUES:
+    - the method .predict and .predict_rolling yields different
+    results on private validation (0.44, 0.49)
+    - private validation is significantly lower than public
 
     this class is for a model (that can also be
     a combination of bagged models)
@@ -57,7 +53,10 @@ class model():
         sys.path.insert(0, '../') # this is for imports from /kernels
 
     def _preprocess(self, market_data):
-        """optional data preprocessing"""
+        """optional data preprocessing
+        NOTE: use of this method is DEPRECATED and is only kept
+        for backward compatibility
+        """
         try:
             market_data = market_data.loc[market_data['time']>=date(2010, 1, 1)]
         except TypeError: # if 'time' is a string value
@@ -110,7 +109,9 @@ class model():
         def create_lag(df_code,n_lag=[3,7,14,],shift_size=1):
             code = df_code['assetCode'].unique()
             
-            # how to print progress in preprocessing?
+            # commented code in this function was nice legacy code to print progress of generating lagged features
+            # should be fixed after competition for completeness, it broke when multiprocessing for implemented
+
             # progress(0, len(n_lag)*len(return_features), prefix = 'Lagged features generation:', length=50)
             # print("\rcreating lags for {}".format(code))
             for _feature, col in enumerate(return_features):
@@ -123,12 +124,15 @@ class model():
                     df_code['lag_%s_%s_mean'%(window,col)] = lag_mean
                     df_code['lag_%s_%s_max'%(window,col)] = lag_max
                     df_code['lag_%s_%s_min'%(window,col)] = lag_min
-        #             df_code['%s_lag_%s_std'%(col,window)] = lag_std
-                    #progress(_feature * len(n_lag) + _lag, len(n_lag) * len(return_features), 
-                    #prefix = 'Lagged features generation:', length = 50)
+                    # progress(_feature * len(n_lag) + _lag, len(n_lag) * len(return_features), 
+                    # prefix = 'Lagged features generation:', length = 50)
             return df_code.fillna(-1)
 
         def generate_lag_features(df,n_lag = [3,7,14]):
+            """
+            NOTE: most of this (ugly) internal functions are copy pasted from the famous
+            qianqian kernel 'eda 67', should be all refactored
+            """
             features = ['time', 'assetCode', 'assetName', 'volume', 'close', 'open',
                'returnsClosePrevRaw1', 'returnsOpenPrevRaw1',
                'returnsClosePrevMktres1', 'returnsOpenPrevMktres1',
@@ -178,6 +182,9 @@ class model():
         # didn't verify it doesn't raise KeyError for new assetCodes
         # not encountered during training phase
 
+        # TODO: check whether previous version of the model
+        # not including this feature fail on the relative test
+
         if self.assetCode_mapping is None:
             self.assetCode_mapping = {asset_code: mapped_value\
                     for mapped_value, asset_code in\
@@ -224,7 +231,7 @@ class model():
         binary_labels = Y >= 0
         return binary_labels.astype(int).values, Y.values
 
-    def train(self, X, Y, verbose=False, normalize=True, normalize_vals=[None]):
+    def train(self, X, Y, verbose=False, normalize=True, normalize_vals=[None], load=True):
         """
         GENERAL:
         basic method to train a model with given data
@@ -242,6 +249,9 @@ class model():
             X: [market_train_df, news_train_df]
             Y: [target]
             verbose: (bool)
+            normalize: (bool)
+            normalize_vals: recommmended self.maxs, self.mins
+            load: load model if possible instead of training
         Returns:
             (optional) training_results
         """
@@ -345,6 +355,7 @@ class model():
         params_5 = {
                 'task': 'train',
                 'boosting_type': 'gbdt',#dart
+                # what is this 'dart'? added by GuoWenRui
                 'objective': 'binary',
                 'learning_rate': x_5[0],
                 'num_leaves': x_5[1],
@@ -366,14 +377,19 @@ class model():
                 'verbose': 1
             }
 
-        try:
-            self._load()
-            print("####################\n[WARNING] TRAINING SKIPPED, MODEL LOADED FROM MEMORY\n#####################")
-            print("[INFO] if you want to avoid skipping training, change model name")
-            return
-        except:
-            print("Tried to load model but didn't find any")
-            pass
+        if load:
+            # training might be extremely long, try to load when possible
+            # NOTE: saving a model is about 300MB
+            try:
+                self._load()
+                print("#"*30)
+                print("\n[WARNING] TRAINING SKIPPED, MODEL LOADED FROM MEMORY\n")
+                print("[INFO] if you want to avoid skipping training, change model name")
+                print("#"*30)
+                return
+            except:
+                print("Tried to load model but didn't find any")
+                pass
 
         training_results = {}
         self.model1 = lgb.train(params_1,
@@ -400,7 +416,6 @@ class model():
                 num_boost_round=100,
                 valid_sets=test_data,
                 early_stopping_rounds=5,
-        #         fobj=exp_loss,
                 )
 
         self.model4 = lgb.train(params_4,
@@ -408,7 +423,6 @@ class model():
                 num_boost_round=100,
                 valid_sets=test_data,
                 early_stopping_rounds=5,
-        #         fobj=exp_loss,
                 )
 
         self.model5 = lgb.train(params_5,
@@ -416,7 +430,6 @@ class model():
                 num_boost_round=100,
                 valid_sets=test_data,
                 early_stopping_rounds=5,
-        #         fobj=exp_loss,
                 )
 
 
@@ -425,7 +438,6 @@ class model():
                 num_boost_round=100,
                 valid_sets=test_data,
                 early_stopping_rounds=10,
-        #         fobj=exp_loss,
                 )
 
         del X, X_train, X_val
@@ -445,9 +457,15 @@ class model():
         """
         given a block of X features gives prediction for everyrow+".pkl"
 
+        (commit #2f9beb6)
+        ISSUE: the method is currently not accurate and doesn't yield
+        same predictions as predict_rolling (official benchmark), thus
+        the use in stacking is discouraged, use instead the (temporary)
+        method .predict_accurate
+
         Args:
             X: [market_train_df, news_train_df]
-            shap: perform shap analysis
+            do_shap: perform shap analysis [DEPRECATED]
             normalize: (bool)
             normalize_vals: recommmended self.maxs, self.mins
         Returns:
@@ -474,7 +492,6 @@ class model():
             shap_values = explainer.shap_values(X_test)
             shap.summary_plot(shap_values, X_test)
 
-
         if verbose: print("Finished prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
 
@@ -486,6 +503,8 @@ class model():
         Args:
             historical_df: [market_train_df, news_train_df]
             market_obs_df: from rolling prediction generator
+            normalize: (bool)
+            normalize_vals: recommmended self.maxs, self.mins
         """
         start_time = time()
         if verbose: print("Starting rolled prediction for model {}, {}".format(self.name, ctime()))
@@ -494,7 +513,6 @@ class model():
 
         X_test = self._generate_features(historical_df[0], historical_df[1], verbose=verbose, normalize=normalize, normalize_vals=normalize_vals, output_len=len(market_obs_df))
         X_test.reset_index(drop=True,inplace=True)
-        #import pdb;pdb.set_trace()
         if verbose: print("X_test shape {}".format(X_test.shape))
         preds= []
         preds.append(self.model1.predict(X_test))
@@ -507,6 +525,67 @@ class model():
 
         if verbose: print("Finished rolled prediction for model {}, TIME {}".format(self.name, time()-start_time))
         return y_test
+
+    def predict_accurate(self, market_test_df, verbose=False):
+        """
+        this is a temporary substitute method for self.predict, is slower
+        since uses rolling predictions but accurate 
+
+        Args:
+            market_test_df
+
+        Attributes (required):
+          self.predict_rolling: instance of model class defined above
+          self.maxs, self.mins: (pd.DataFrame)
+          self.max_lag: (int)
+
+        NOTE:
+        the method is NOT unit tested, it was just run and
+        didn't break. It was copy pasted from a verified code.
+        Also testing this method is not in scope.
+        """
+        from time import time
+        if verbose: print("Starting predict_accurate for model {}, {}".format(self.name, ctime()))
+        start_time = time()
+
+        # the following 9 lines are a simulation of two-sigma
+        # prediction 'rolling' framework
+        PREDICTIONS, days = [], []
+        for date in market_test_df['time'].unique():
+            market_obs_df = market_test_df[market_test_df['time'] == date].drop(['returnsOpenNextMktres10','universe'],axis=1)
+            predictions_template_df = pd.DataFrame({'assetCode':market_test_df[market_test_df['time'] == date]['assetCode'],
+                                                    'confidenceValue':0.0})
+            days.append([market_obs_df,None,predictions_template_df])
+        
+        # the following 25~ lines are the official benchmark
+        # code for rolling predictions
+        n_days, prep_time, prediction_time, packaging_time = 0, 0, 0, 0
+        total_market_obs_df = []
+        for (market_obs_df, news_obs_df, predictions_template_df) in days:
+            n_days +=1
+            if (n_days%50==0): print(n_days,end=' ')
+            t = time()
+            try:
+                market_obs_df['time'] = market_obs_df['time'].dt.date
+            except:
+                pass
+
+            total_market_obs_df.append(market_obs_df)
+            if len(total_market_obs_df) == 1:
+                history_df = total_market_obs_df[0]
+            else:
+                history_df = pd.concat(total_market_obs_df[-(self.max_lag + 1):])
+
+            confidence = self.predict_rolling([history_df, None], market_obs_df, verbose=True, normalize=True, normalize_vals = [self.maxs, self.mins])      
+
+            preds = pd.DataFrame({'assetCode':market_obs_df['assetCode'],'confidence':confidence})
+            predictions_template_df = predictions_template_df.merge(preds,how='left').drop('confidenceValue',axis=1).fillna(0).rename(columns={'confidence':'confidenceValue'})
+            PREDICTIONS.append(predictions_template_df)
+            packaging_time += time() - t
+        
+        del days
+        if verbose: print("Finished predict_accurate for model {}, TIME {}".format(self.name, time()-start_time))
+        return pd.concat(PREDICTIONS).reset_index(drop=True,inplace=True)
 
     def inspect(self, X):
         """

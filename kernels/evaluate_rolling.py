@@ -31,7 +31,11 @@ def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=No
     try:
         os.path.isdir(PREDICTIONS_FOLDER)
     except: exit("DATA_FOLDER not valid")
-    SAVE_PATH = os.path.join(PREDICTIONS_FOLDER,"rolling_"+MODEL_NAME+".pkl")
+    # there is some problems with saving file with extension .pkl
+    # they don't get saved with the extension and then not recognized by
+    # check for rewrite alert. Should look into it and standardize
+    # saving format for pkl files
+    SAVE_PATH = os.path.join(PREDICTIONS_FOLDER,"rolling_"+MODEL_NAME)
     print("[evaluate_rolling] SAVE_PATH = "+SAVE_PATH)
     if os.path.isfile(SAVE_PATH):
         print("[evalute_rolling] overwriting exsisting predictions at '"+SAVE_PATH+"' , Continue? y/n")
@@ -51,45 +55,8 @@ def evaluate_rolling(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, fold=No
     model.train([market_train_df, news_train_df], target, verbose=True)
     max_values, min_values, max_lag = model.maxs, model.mins, model.max_lag # values used for normalization during predictions
     if inspect: model.inspect(None)
-    
-    #prediction loop
-    PREDICTIONS = []
-    days = []
-    for date in market_test_df['time'].unique():
-        market_obs_df = market_test_df[market_test_df['time'] == date].drop(['returnsOpenNextMktres10','universe'],axis=1)
-        predictions_template_df = pd.DataFrame({'assetCode':market_test_df[market_test_df['time'] == date]['assetCode'],
-                                                'confidenceValue':0.0})
-        days.append([market_obs_df,None,predictions_template_df])
-    
-    """locals required
-    model: instance of model class defined above
-    max_values, min_values: (pd.DataFrame)
-    max_lag: (int)
-    """
-    from time import time
-    n_days, prep_time, prediction_time, packaging_time = 0, 0, 0, 0
-    total_market_obs_df = []
-    for (market_obs_df, news_obs_df, predictions_template_df) in days:
-        n_days +=1
-        if (n_days%50==0): print(n_days,end=' ')
-        t = time()
-        try:
-            market_obs_df['time'] = market_obs_df['time'].dt.date
-        except:
-            pass
 
-        total_market_obs_df.append(market_obs_df)
-        if len(total_market_obs_df) == 1:
-            history_df = total_market_obs_df[0]
-        else:
-            history_df = pd.concat(total_market_obs_df[-(max_lag + 1):])
-
-        confidence = model.predict_rolling([history_df, None], market_obs_df, verbose=True, normalize=True, normalize_vals = [max_values, min_values])      
-
-        preds = pd.DataFrame({'assetCode':market_obs_df['assetCode'],'confidence':confidence})
-        predictions_template_df = predictions_template_df.merge(preds,how='left').drop('confidenceValue',axis=1).fillna(0).rename(columns={'confidence':'confidenceValue'})
-        PREDICTIONS.append(predictions_template_df)
-        packaging_time += time() - t
+    PREDICTIONS = model.predict_accurate(market_test_df, verbose=True)
         
     import pickle as pk
     pk.dump(PREDICTIONS, open(os.path.join(PREDICTIONS_FOLDER, "rolling_"+MODEL_NAME), "wb"))
