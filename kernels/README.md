@@ -42,9 +42,9 @@ KAGGLE RUNS:
 
 - lgbm_model_71 train leak: OK (standard 0.704)
 - [2] lgbm_model_71 train-leak map-bug: OK (didn't fix bug, 0.66)
-- [3] lgbm_model_71 no train leak: (on going..) 3 and 4 are for check if without leaking the map bug actually improve performance
-- [4] lgbm_model_71 no train leak map-bug: (on going..)
-- SigMA EDA (map-fix): non standardized model_71 with map-bug fix and check if predictions are the same with mine from 2 (on going..)
+- [3] lgbm_model_71 no train leak: with no train leak scores less 0.68
+- [4] lgbm_model_71 no train leak: map bug look was fixed badly, it scores 0.64
+- SigMA EDA (map-fix): non standardized model_71 with map-bug fix and check if predictions are the same with mine from 2,probably need to doublecheck mapping
 
 [ NEXT ] - standardize stacking
 

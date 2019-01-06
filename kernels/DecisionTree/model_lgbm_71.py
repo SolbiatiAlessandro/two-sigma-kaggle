@@ -553,7 +553,11 @@ class model():
         # prediction 'rolling' framework
         PREDICTIONS, days = [], []
         for date in market_test_df['time'].unique():
-            market_obs_df = market_test_df[market_test_df['time'] == date].drop(['returnsOpenNextMktres10','universe'],axis=1)
+            market_obs_df = market_test_df[market_test_df['time'] == date]
+            if 'returnsOpenNextMktres10' in market_obs_df.columns:
+                market_obs_df.drop(['returnsOpenNextMktres10'],axis=1,inplace=True)
+            if 'universe' in market_obs_df.columns:
+                market_obs_df.drop(['universe'],axis=1,inplace=True)
             predictions_template_df = pd.DataFrame({'assetCode':market_test_df[market_test_df['time'] == date]['assetCode'],
                                                     'confidenceValue':0.0})
             days.append([market_obs_df,None,predictions_template_df])
@@ -586,7 +590,7 @@ class model():
         
         del days
         if verbose: print("Finished predict_accurate for model {}, TIME {}".format(self.name, time()-start_time))
-        return pd.concat(PREDICTIONS).reset_index(drop=True,inplace=True)
+        return pd.concat(PREDICTIONS).reset_index(drop=True)
 
     def inspect(self, X):
         """

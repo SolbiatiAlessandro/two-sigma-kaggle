@@ -199,22 +199,26 @@ def evaluate_kfold(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, inspect=F
         #    expensive for my machine, but if there is some model that 
         #    I want to examine just need to change MODEL_NAME and force saving
         model = model(MODEL_NAME)
-        model.train([cur_block_X, None], cur_block_Y, verbose=True, load=False)
-        cur_block_pred = model.predict_accurate(cur_block_X_test, verbose=True)
+        model.train([cur_block_X, None], cur_block_Y, verbose=True, load=True)
+        cur_block_pred = model.predict_accurate(cur_block_X_test,verbose=True)['confidenceValue']
+        #cur_block_pred = model.predict([cur_block_X_test,None], verbose=True)
         
         # this np.c_ will be essential for stacking later
         # cur_block_X_train_level2 = np.c_[cur_block_pred_model1, cur_block_pred_model2, ..] 
-        cur_block_X_train_level2 = np.c_[cur_block_pred] 
+        # cur_block_X_train_level2 = cur_block_pred 
     
         #    3. Store predictions from 2. in the right place of `X_train_level2`. 
         #       You can use `periods_level2` for it
         #       Make sure the order of the meta-features is the same as in `X_test_level2`
 
         #    this is not really necessary for cross validation
-        X_train_level2[periods_level2 == cur_block_num] = cur_block_X_train_level2
+        #  X_train_level2[periods_level2 == cur_block_num] = cur_block_X_train_level2
 
         #    4. evaluate cross validation
         cur_block_score = sigma_score(cur_block_pred, cur_block_Y_test, cur_block_X_test['time'])
+
+        with open(os.path.join(PREDICTIONS_FOLDER, MODEL_NAME), "a") as output_file:
+            output_file.write("{} : {}\n".format(cur_block_num, cur_block_score))
         block_score_results[cur_block_num] = cur_block_score
         print('[SCORE] block_num = {}, sigma_score = {}'.format(cur_block_num, cur_block_score))
 
@@ -226,8 +230,6 @@ def evaluate_kfold(model, MODEL_NAME, DATA_FOLDER, PREDICTIONS_FOLDER, inspect=F
     ### [write predictions] ###
     ###########################
 
-    with open(os.path.join(PREDICTIONS_FOLDER, MODEL_NAME), "a") as output_file:
-        from time import ctime
         output_file.write("\n\n[KFOLD PREDICTION RESULTS]\n[TIME: {}]\n".format(ctime()))
         for block_num, score in block_score_results.items():
             output_file.write("{} : {}".format(block_num, score))
